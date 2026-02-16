@@ -1,6 +1,6 @@
 /**
  * Zod Validation Schemas
- * Form validation schemas for the YoYo Events system
+ * Form validation schemas for the YoYo League system
  */
 import { z } from 'zod'
 

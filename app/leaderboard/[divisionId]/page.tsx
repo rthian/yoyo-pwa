@@ -2,16 +2,20 @@
  * Public Leaderboard Page
  * Accessible via shareable link with token
  * Includes real-time updates via Supabase Realtime
+ * Podium-style top 3 + animated list
  */
 'use client'
 
 import { use, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useSearchParams } from 'next/navigation'
-import { Loader2, Trophy, Medal, Award, RefreshCw, Radio } from 'lucide-react'
+import { Loader2, Trophy, RefreshCw, Radio } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useLeaderboard } from '@/lib/hooks/use-leaderboard'
+import Podium from '@/components/leaderboard/Podium'
+import LeaderboardRow from '@/components/leaderboard/LeaderboardRow'
 
 interface PageProps {
   params: Promise<{ divisionId: string }>
@@ -29,13 +33,6 @@ export default function PublicLeaderboardPage({ params }: PageProps) {
     autoRefresh,
     refreshInterval: 10000,
   })
-
-  const getRankIcon = (rank: number | null) => {
-    if (rank === 1) return <Trophy className="h-5 w-5 text-yellow-500" />
-    if (rank === 2) return <Medal className="h-5 w-5 text-gray-400" />
-    if (rank === 3) return <Award className="h-5 w-5 text-orange-500" />
-    return null
-  }
 
   if (loading) {
     return (
@@ -61,16 +58,20 @@ export default function PublicLeaderboardPage({ params }: PageProps) {
   if (!data) return null
 
   const { division, leaderboard, lastUpdated } = data
+  const scored = leaderboard.filter((e) => e.scoreCount > 0)
+  const top3 = scored.filter((e) => e.rank !== null && e.rank <= 3) as Array<(typeof scored)[0] & { rank: number }>
+  const rest = scored.filter((e) => e.rank === null || e.rank > 3)
+  const unscored = leaderboard.filter((e) => e.scoreCount === 0)
 
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-2xl mx-auto space-y-4">
         {/* Header */}
         <div className="text-center py-4">
-          <p className="text-sm text-muted-foreground mb-1">
+          <p className="text-sm text-muted-foreground mb-1 tracking-tight">
             {division.event.name}
           </p>
-          <h1 className="text-2xl font-bold">{division.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{division.name}</h1>
           <div className="flex items-center justify-center gap-2 mt-2">
             <Badge variant={division.event.status === 'active' ? 'default' : 'secondary'}>
               {division.event.status}
@@ -85,11 +86,7 @@ export default function PublicLeaderboardPage({ params }: PageProps) {
             <span>Live • Updated: {new Date(lastUpdated).toLocaleTimeString()}</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={refresh}
-            >
+            <Button variant="ghost" size="sm" onClick={refresh}>
               <RefreshCw className="h-4 w-4" />
             </Button>
             <label className="flex items-center gap-1 cursor-pointer">
@@ -104,79 +101,54 @@ export default function PublicLeaderboardPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Leaderboard */}
+        {/* Podium - Top 3 */}
+        {top3.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Podium entries={top3} className="mb-4" />
+          </motion.div>
+        )}
+
+        {/* Leaderboard - Rest of ranked */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 tracking-tight">
               <Trophy className="h-5 w-5" />
               Leaderboard
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {leaderboard.length === 0 ? (
+            {scored.length === 0 ? (
               <p className="text-center py-8 text-muted-foreground">
                 No scores yet
               </p>
             ) : (
               <div className="space-y-2">
-                {leaderboard
-                  .filter(entry => entry.scoreCount > 0)
-                  .map((entry) => (
-                  <div
-                    key={entry.memberId}
-                    className={`flex items-center gap-4 p-3 rounded-lg border ${
-                      entry.rank === 1 ? 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200' :
-                      entry.rank === 2 ? 'bg-gray-50 dark:bg-gray-900/30 border-gray-200' :
-                      entry.rank === 3 ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-200' :
-                      ''
-                    }`}
-                  >
-                    {/* Rank */}
-                    <div className="w-8 text-center">
-                      {getRankIcon(entry.rank) || (
-                        <span className="text-lg font-bold text-muted-foreground">
-                          {entry.rank}
-                        </span>
-                      )}
-                    </div>
+                <AnimatePresence mode="popLayout">
+                  {rest.map((entry, index) => (
+                    <LeaderboardRow
+                      key={entry.memberId}
+                      entry={entry}
+                      index={index}
+                    />
+                  ))}
+                </AnimatePresence>
 
-                    {/* Name */}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold truncate">
-                        {entry.memberName}
-                      </p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {entry.nickname && `"${entry.nickname}" • `}
-                        {entry.country || 'No country'}
-                      </p>
-                    </div>
-
-                    {/* Score */}
-                    <div className="text-right">
-                      <p className="text-xl font-bold">
-                        {entry.totalScore.toFixed(2)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {entry.scoreCount} judge{entry.scoreCount !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                
                 {/* Unscored participants */}
-                {leaderboard.some(e => e.scoreCount === 0) && (
-                  <div className="pt-4 border-t">
+                {unscored.length > 0 && (
+                  <div className="pt-4 border-t border-border mt-4">
                     <p className="text-sm text-muted-foreground mb-2">
                       Awaiting Scores
                     </p>
-                    {leaderboard
-                      .filter(entry => entry.scoreCount === 0)
-                      .map((entry) => (
+                    {unscored.map((entry) => (
                       <div
                         key={entry.memberId}
                         className="flex items-center gap-4 p-2 opacity-60"
                       >
-                        <div className="w-8 text-center text-muted-foreground">
+                        <div className="w-8 text-center text-muted-foreground font-mono tabular-nums">
                           #{entry.playOrder}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -194,7 +166,8 @@ export default function PublicLeaderboardPage({ params }: PageProps) {
 
         {/* Footer */}
         <div className="text-center text-sm text-muted-foreground py-4">
-          <p>YoYo Events Management System</p>
+          <p>YoYo League</p>
+          <p className="text-xs mt-1">© {new Date().getFullYear()} YoYo League. Created by <a href="https://github.com/rthian" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">rthian</a>.</p>
         </div>
       </div>
     </div>

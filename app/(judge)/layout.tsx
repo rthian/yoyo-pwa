@@ -37,12 +37,15 @@ export default async function JudgeLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-screen bg-background pb-16 flex flex-col">
       <JudgeHeader member={member} />
       <OfflineIndicator />
-      <main className="p-4">
+      <main className="p-4 flex-1">
         {children}
       </main>
+      <footer className="text-center text-xs text-muted-foreground py-3 safe-area-bottom">
+        © {new Date().getFullYear()} YoYo League. Created by <a href="https://github.com/rthian" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">rthian</a>.
+      </footer>
       <JudgeBottomNav />
     </div>
   )

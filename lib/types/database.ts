@@ -1,5 +1,5 @@
 /**
- * Database Types for YoYo Event Management System
+ * Database Types for YoYo League
  * TypeScript interfaces matching the Supabase schema
  */
 

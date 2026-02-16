@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide walks you through deploying the YoYo Events PWA to production.
+This guide walks you through deploying YoYo League to production.
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@ This guide walks you through deploying the YoYo Events PWA to production.
 2. Click "New Project"
 3. Choose your organization
 4. Enter project details:
-   - **Name**: `yoyo-events` (or your choice)
+   - **Name**: `yoyo-league` (or your choice)
    - **Database Password**: Generate a strong password (save this!)
    - **Region**: Choose closest to your users
 5. Click "Create new project" and wait for setup (~2 minutes)
@@ -52,7 +52,7 @@ This guide walks you through deploying the YoYo Events PWA to production.
 2. Go to [vercel.com](https://vercel.com) and sign in
 3. Click "Add New" → "Project"
 4. Import your GitHub repository
-5. Select the `yoyo-pwa` directory as the root
+5. Select the project directory as the root
 
 ### Configure Environment Variables
 
@@ -107,7 +107,7 @@ Once you have one admin, they can create more users through:
 ### Update Site URL
 
 1. Go to Supabase → **Authentication** → **URL Configuration**
-2. Set **Site URL** to your production URL (e.g., `https://yoyo-events.vercel.app`)
+2. Set **Site URL** to your production URL (e.g., `https://yoyo-league.vercel.app`)
 3. Add to **Redirect URLs**:
    - `https://your-domain.com/auth/callback`
    - `https://your-domain.com/auth/reset-password`

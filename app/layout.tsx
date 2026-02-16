@@ -19,13 +19,13 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'YoYo Events',
-  description: 'YoYo Event Management, Judging, and Ranking System',
+  title: 'YoYo League',
+  description: 'YoYo League — Event Management, Judging, and Ranking for Yo-Yo Competitions',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'YoYo Events',
+    title: 'YoYo League',
   },
   formatDetection: {
     telephone: false,

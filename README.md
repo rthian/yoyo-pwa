@@ -1,4 +1,4 @@
-# YoYo Events PWA
+# YoYo League
 
 A Progressive Web Application for managing yo-yo competition events, judging, and scoring. Built with Next.js, Supabase, and Tailwind CSS.
 
@@ -44,7 +44,7 @@ A Progressive Web Application for managing yo-yo competition events, judging, an
 
 ```bash
 git clone <repository-url>
-cd yoyo-pwa
+cd yoyo-league
 npm install
 ```
 
@@ -121,7 +121,7 @@ Set these in your Vercel project settings:
 ## Project Structure
 
 ```
-yoyo-pwa/
+yoyo-league/
 ├── app/                    # Next.js App Router pages
 │   ├── (admin)/           # Admin layout and pages
 │   ├── (judge)/           # Judge layout and pages
@@ -211,4 +211,4 @@ Total = Technical + Performance - Deductions
 ## License
 
 MIT License - see LICENSE file for details.
-# yoyo-pwa
+# YoYo League

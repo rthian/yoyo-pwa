@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { ArrowLeft, Save, Send, Loader2, User, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import NumberStepper from './NumberStepper'
+import ClickerInput from './ClickerInput'
 import type { Division, DivisionMember, Score, Member } from '@/lib/types/database'
 
 interface ParticipantWithMember extends DivisionMember {
@@ -179,14 +179,14 @@ export default function ScoringForm({
         </CardContent>
       </Card>
 
-      {/* Technical Scores */}
+      {/* Technical Scores - large touch targets for eyes-free use */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Technical Execution</CardTitle>
+          <CardTitle className="text-base tracking-tight">Technical Execution</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {scoreFields.slice(0, 4).map(field => (
-            <NumberStepper
+            <ClickerInput
               key={field.key}
               label={field.label}
               value={scores[field.key]}
@@ -203,11 +203,11 @@ export default function ScoringForm({
       {/* Performance Scores */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Performance</CardTitle>
+          <CardTitle className="text-base tracking-tight">Performance</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {scoreFields.slice(4, 10).map(field => (
-            <NumberStepper
+            <ClickerInput
               key={field.key}
               label={field.label}
               value={scores[field.key]}
@@ -224,10 +224,10 @@ export default function ScoringForm({
       {/* Deductions */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base text-destructive">Deductions</CardTitle>
+          <CardTitle className="text-base text-destructive tracking-tight">Deductions</CardTitle>
         </CardHeader>
         <CardContent>
-          <NumberStepper
+          <ClickerInput
             label={scoreFields[10].label}
             value={scores.ex_deductions}
             onChange={(v) => handleScoreChange('ex_deductions', v)}
@@ -240,21 +240,21 @@ export default function ScoringForm({
         </CardContent>
       </Card>
 
-      {/* Totals */}
-      <Card className="bg-primary/5 border-primary/20">
+      {/* Totals - high contrast for dim stages (dark mode) */}
+      <Card className="bg-primary/10 dark:bg-primary/20 border-primary/30">
         <CardContent className="p-4">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <p className="text-xs text-muted-foreground">Technical</p>
-              <p className="text-xl font-bold">{totals.technical.toFixed(1)}</p>
+              <p className="text-xl font-bold font-mono tabular-nums">{totals.technical.toFixed(1)}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Performance</p>
-              <p className="text-xl font-bold">{totals.performance.toFixed(1)}</p>
+              <p className="text-xl font-bold font-mono tabular-nums">{totals.performance.toFixed(1)}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Total</p>
-              <p className="text-2xl font-bold text-primary">{totals.total.toFixed(1)}</p>
+              <p className="text-2xl font-bold font-mono tabular-nums text-primary">{totals.total.toFixed(1)}</p>
             </div>
           </div>
         </CardContent>

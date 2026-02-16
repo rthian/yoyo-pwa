@@ -118,6 +118,20 @@ export async function PATCH(
     const body = await request.json()
     const supabaseAdmin = createAdminClient()
 
+    if (Array.isArray(body.participantIds)) {
+      for (let i = 0; i < body.participantIds.length; i++) {
+        const { error } = await supabaseAdmin
+          .from('division_members')
+          .update({ play_order: i + 1 })
+          .eq('id', body.participantIds[i])
+
+        if (error) {
+          return NextResponse.json({ error: error.message }, { status: 500 })
+        }
+      }
+      return NextResponse.json({ success: true })
+    }
+
     const { error } = await supabaseAdmin
       .from('division_members')
       .update({ status: body.status })

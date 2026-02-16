@@ -18,6 +18,9 @@ const badgeVariants = cva(
           "border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         ghost: "[a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         link: "text-primary underline-offset-4 [a&]:hover:underline",
+        gold: "bg-[var(--gold)]/20 text-[var(--gold)] border-[var(--gold)]/40 [a&]:hover:bg-[var(--gold)]/30",
+        silver: "bg-[var(--silver)]/20 text-[var(--silver)] border-[var(--silver)]/40 [a&]:hover:bg-[var(--silver)]/30",
+        bronze: "bg-[var(--bronze)]/20 text-[var(--bronze)] border-[var(--bronze)]/40 [a&]:hover:bg-[var(--bronze)]/30",
       },
     },
     defaultVariants: {

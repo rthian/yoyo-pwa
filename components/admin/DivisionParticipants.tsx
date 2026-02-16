@@ -1,15 +1,24 @@
 /**
  * Division Participants Component
- * Manage participants in a division
+ * Manage participants in a division with drag-and-drop play order
  */
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -29,8 +38,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Trash2, Loader2, Users } from 'lucide-react'
+import { Plus, Loader2, Users } from 'lucide-react'
 import { toast } from 'sonner'
+import SortableParticipantRow from './SortableParticipantRow'
 import type { Member, DivisionMember, DivisionMemberStatus } from '@/lib/types/database'
 
 interface DivisionParticipantsProps {
@@ -56,8 +66,14 @@ export default function DivisionParticipants({ divisionId }: DivisionParticipant
   const [loading, setLoading] = useState(true)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [reordering, setReordering] = useState(false)
 
-  const fetchData = async () => {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  const fetchData = useCallback(async () => {
     setLoading(true)
     
     try {
@@ -73,11 +89,44 @@ export default function DivisionParticipants({ divisionId }: DivisionParticipant
     } finally {
       setLoading(false)
     }
-  }
+  }, [divisionId])
 
   useEffect(() => {
     fetchData()
-  }, [divisionId])
+  }, [fetchData])
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = participants.findIndex((p) => p.id === active.id)
+    const newIndex = participants.findIndex((p) => p.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const reordered = arrayMove(participants, oldIndex, newIndex)
+    setParticipants(reordered)
+
+    setReordering(true)
+    try {
+      const response = await fetch(`/api/divisions/${divisionId}/participants`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          participantIds: reordered.map((p) => p.id),
+        }),
+      })
+      if (!response.ok) {
+        const result = await response.json()
+        throw new Error(result.error || 'Failed to reorder')
+      }
+      toast.success('Play order updated')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to reorder')
+      fetchData()
+    } finally {
+      setReordering(false)
+    }
+  }
 
   const handleAdd = async () => {
     if (!selectedMemberId) return
@@ -225,56 +274,41 @@ export default function DivisionParticipants({ divisionId }: DivisionParticipant
           <p>No participants yet. Add members to this division.</p>
         </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">#</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {participants.map((participant, index) => (
-              <TableRow key={participant.id}>
-                <TableCell className="font-medium">{index + 1}</TableCell>
-                <TableCell>{participant.member.full_name}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {participant.member.email}
-                </TableCell>
-                <TableCell>
-                  <Select
-                    value={participant.status}
-                    onValueChange={(value) => 
-                      handleStatusChange(participant.id, value as DivisionMemberStatus)
-                    }
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statusOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemove(participant.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </TableCell>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10" aria-label="Drag to reorder" />
+                <TableHead className="w-12">#</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              <SortableContext
+                items={participants.map((p) => p.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {participants.map((participant, index) => (
+                  <SortableParticipantRow
+                    key={participant.id}
+                    participant={participant}
+                    index={index}
+                    statusOptions={statusOptions}
+                    onStatusChange={handleStatusChange}
+                    onRemove={handleRemove}
+                  />
+                ))}
+              </SortableContext>
+            </TableBody>
+          </Table>
+        </DndContext>
       )}
     </div>
   )

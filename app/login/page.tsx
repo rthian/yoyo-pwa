@@ -54,7 +54,7 @@ function LoginForm() {
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
         <div className="text-4xl mb-2">🪀</div>
-        <CardTitle className="text-2xl">YoYo Events</CardTitle>
+        <CardTitle className="text-2xl">YoYo League</CardTitle>
         <CardDescription>
           Sign in to access your personalized dashboard
         </CardDescription>
@@ -122,7 +122,7 @@ function LoginFormFallback() {
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
         <div className="text-4xl mb-2">🪀</div>
-        <CardTitle className="text-2xl">YoYo Events</CardTitle>
+        <CardTitle className="text-2xl">YoYo League</CardTitle>
         <CardDescription>Loading...</CardDescription>
       </CardHeader>
       <CardContent className="flex justify-center py-8">
@@ -134,10 +134,15 @@ function LoginFormFallback() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Suspense fallback={<LoginFormFallback />}>
-        <LoginForm />
-      </Suspense>
+    <div className="min-h-screen flex flex-col bg-background p-4">
+      <div className="flex-1 flex items-center justify-center">
+        <Suspense fallback={<LoginFormFallback />}>
+          <LoginForm />
+        </Suspense>
+      </div>
+      <footer className="text-center text-xs text-muted-foreground py-4">
+        © {new Date().getFullYear()} YoYo League. Created by <a href="https://github.com/rthian" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">rthian</a>.
+      </footer>
     </div>
   )
 }

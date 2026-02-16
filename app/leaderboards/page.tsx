@@ -192,7 +192,8 @@ export default function LeaderboardsHubPage() {
       {/* Footer */}
       <footer className="border-t py-8 mt-16">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p>YoYo Event Management System</p>
+          <p>YoYo League</p>
+          <p className="text-xs mt-2">© {new Date().getFullYear()} YoYo League. Created by <a href="https://github.com/rthian" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">rthian</a>.</p>
         </div>
       </footer>
     </div>

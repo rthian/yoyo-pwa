@@ -37,12 +37,15 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <AdminHeader member={member} />
-      <div className="flex">
+      <div className="flex flex-1">
         <AdminSidebar />
-        <main className="flex-1 p-6">
-          {children}
+        <main className="flex-1 p-6 flex flex-col">
+          <div className="flex-1">{children}</div>
+          <footer className="text-center text-xs text-muted-foreground py-4 mt-6 border-t">
+            © {new Date().getFullYear()} YoYo League. Created by <a href="https://github.com/rthian" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">rthian</a>.
+          </footer>
         </main>
       </div>
     </div>

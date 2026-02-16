@@ -6,7 +6,7 @@ import localforage from 'localforage'
 
 // Initialize localforage store
 const scoreQueue = localforage.createInstance({
-  name: 'yoyo-pwa',
+  name: 'yoyo-league',
   storeName: 'offline-scores',
 })
 

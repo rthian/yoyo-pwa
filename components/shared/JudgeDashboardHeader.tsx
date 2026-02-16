@@ -25,7 +25,7 @@ export default function JudgeDashboardHeader() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 font-semibold mr-6">
           <span className="text-xl">🪀</span>
-          <span className="hidden sm:inline">YoYo Events</span>
+          <span className="hidden sm:inline">YoYo League</span>
         </Link>
 
         {/* Navigation */}

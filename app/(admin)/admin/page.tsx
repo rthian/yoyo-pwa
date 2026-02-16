@@ -53,7 +53,7 @@ export default async function AdminDashboard() {
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">
-          Welcome to the YoYo Event Management System
+          Welcome to YoYo League
         </p>
       </div>
 

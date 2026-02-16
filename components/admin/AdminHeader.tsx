@@ -72,7 +72,7 @@ export default function AdminHeader({ member }: AdminHeaderProps) {
         {/* Logo */}
         <Link href="/admin" className="flex items-center gap-2 font-semibold ml-2 md:ml-0">
           <span className="text-xl">🪀</span>
-          <span className="hidden sm:inline">YoYo Admin</span>
+          <span className="hidden sm:inline">YoYo League Admin</span>
         </Link>
 
         {/* Spacer */}

@@ -13,7 +13,7 @@ export default function LandingPage() {
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16 text-center">
         <div className="text-6xl mb-4">🪀</div>
-        <h1 className="text-4xl font-bold mb-4">YoYo Events</h1>
+        <h1 className="text-4xl font-bold mb-4">YoYo League</h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
           Event management, judging, and ranking system for competitive yo-yo events
         </p>
@@ -78,8 +78,9 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t py-8 mt-16">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p>YoYo Event Management System</p>
+          <p>YoYo League — Event Management & Judging</p>
           <p className="text-sm mt-2">Built with Next.js, Supabase, and shadcn/ui</p>
+          <p className="text-xs mt-2">© {new Date().getFullYear()} YoYo League. Created by <a href="https://github.com/rthian" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">rthian</a>.</p>
         </div>
       </footer>
     </main>
