@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { Plus, Trash2, Loader2, Gavel } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Member, DivisionJudge, JudgeType } from '@/lib/types/database'
@@ -46,6 +47,7 @@ const judgeTypeOptions: { value: JudgeType; label: string }[] = [
   { value: 'general', label: 'General' },
   { value: 'technical', label: 'Technical' },
   { value: 'performance', label: 'Performance' },
+  { value: 'shadow', label: 'Shadow (training)' },
 ]
 
 export default function DivisionJudges({ divisionId }: DivisionJudgesProps) {
@@ -156,6 +158,27 @@ export default function DivisionJudges({ divisionId }: DivisionJudgesProps) {
     }
   }
 
+  const handleIncludeInResultsChange = async (assignmentId: string, included: boolean) => {
+    try {
+      const response = await fetch(`/api/divisions/${divisionId}/judges`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignmentId, scores_included_in_leaderboard: included }),
+      })
+
+      if (!response.ok) {
+        const result = await response.json()
+        throw new Error(result.error || 'Failed to update')
+      }
+
+      toast.success(included ? 'Judge scores will count in results' : 'Judge scores excluded from results')
+      fetchData()
+    } catch (error) {
+      console.error('Error updating include in results:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to update')
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -255,6 +278,7 @@ export default function DivisionJudges({ divisionId }: DivisionJudgesProps) {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Include in results</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -268,11 +292,11 @@ export default function DivisionJudges({ divisionId }: DivisionJudgesProps) {
                 <TableCell>
                   <Select
                     value={judge.judge_type}
-                    onValueChange={(value) => 
+                    onValueChange={(value) =>
                       handleTypeChange(judge.id, value as JudgeType)
                     }
                   >
-                    <SelectTrigger className="w-32">
+                    <SelectTrigger className="w-36">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -283,6 +307,18 @@ export default function DivisionJudges({ divisionId }: DivisionJudgesProps) {
                       ))}
                     </SelectContent>
                   </Select>
+                </TableCell>
+                <TableCell>
+                  {judge.judge_type === 'shadow' ? (
+                    <span className="text-muted-foreground text-sm">No (training)</span>
+                  ) : (
+                    <Switch
+                      checked={judge.scores_included_in_leaderboard !== false}
+                      onCheckedChange={(checked) =>
+                        handleIncludeInResultsChange(judge.id, checked)
+                      }
+                    />
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
                   <Button

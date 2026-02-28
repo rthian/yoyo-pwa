@@ -30,6 +30,7 @@ interface LeaderboardData {
   division: DivisionWithEvent
   leaderboard: LeaderboardEntry[]
   lastUpdated: string
+  scoresHidden?: boolean
 }
 
 interface UseLeaderboardOptions {

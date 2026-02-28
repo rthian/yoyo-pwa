@@ -44,6 +44,8 @@ export const divisionSchema = z.object({
   scoring_type: z.enum(['standard', 'clicker', 'head_to_head']),
   sort_order: z.number().int(),
   is_active: z.boolean(),
+  scoring_locked: z.boolean().optional(),
+  hide_scores_until_complete: z.boolean().optional(),
   round_type: z.enum(['wildcard', 'qualifier', 'semi_final', 'final', 'exhibition', 'other']).optional().nullable(),
   scheduled_start: z.string().optional().nullable(),
   scheduled_end: z.string().optional().nullable(),
@@ -96,7 +98,7 @@ export type DivisionMemberFormData = z.infer<typeof divisionMemberSchema>
 export const divisionJudgeSchema = z.object({
   division_id: z.string().uuid('Invalid division ID'),
   member_id: z.string().uuid('Invalid member ID'),
-  judge_type: z.enum(['head', 'general', 'technical', 'performance']).default('general'),
+  judge_type: z.enum(['head', 'general', 'technical', 'performance', 'shadow']).default('general'),
 })
 
 export type DivisionJudgeFormData = z.infer<typeof divisionJudgeSchema>

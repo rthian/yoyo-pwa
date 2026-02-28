@@ -48,6 +48,10 @@ export default async function ScoringPage({ params }: ScoringPageProps) {
     notFound()
   }
 
+  if (division.scoring_locked) {
+    redirect(`/judge/divisions/${divisionId}?locked=1`)
+  }
+
   // Get participant
   const { data: participant } = await supabaseAdmin
     .from('division_members')
