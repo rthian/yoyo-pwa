@@ -48,8 +48,9 @@ app/                    # Next.js App Router
   login/                # Auth page
   page.tsx              # Root: role-based redirect
 components/
-  admin/                # Admin-specific UI components
-  judge/                # Judge-specific UI (ScoringForm, NumberStepper, ClickerInput)
+  admin/                # Admin-specific UI (DivisionForm, DivisionJudges, etc.)
+  judge/                # Judge-specific UI (ScoringForm, NumberStepper, ClickerInput,
+                        #   LockDivisionButton, JudgeVisualiser, DivisionPageTabs)
   leaderboard/          # Leaderboard display components
   ui/                   # shadcn/ui base components
 lib/
@@ -57,8 +58,14 @@ lib/
   hooks/                # Custom hooks (online status, leaderboard, haptics)
   offline/              # IndexedDB score queue and sync manager
   supabase/             # Supabase clients: client.ts, server.ts, admin.ts, middleware.ts
-  types/database.ts     # All TypeScript types for DB rows and enums
-  utils/                # cn(), country flags, haptic utilities
+  types/
+    database.ts         # All TypeScript types for DB rows and enums
+    visualiser.ts       # Types for head judge visualiser API responses
+  utils/
+    judge-analytics.ts  # Panel stats, outlier detection, judge deviation analytics
+    country-flags.ts    # Country flag utilities
+    haptics.ts          # Haptic feedback
+    utils.ts            # cn() and general utilities
   validations/index.ts  # All Zod schemas for forms
 supabase/
   schema.sql            # Full DB schema
@@ -120,21 +127,29 @@ Key tables (full schema in `supabase/schema.sql`, TypeScript types in `lib/types
 
 | Table | Description |
 |-------|-------------|
-| `members` | Users with roles: `admin`, `judge`, `competitor`, `spectator` |
-| `events` | Competition events (draft → published → completed) |
-| `divisions` | Categories within events; has `scoring_type` |
+| `members` | Users with roles: `admin`, `judge`, `member` |
+| `events` | Competition events (draft → published → active → completed → cancelled) |
+| `divisions` | Categories within events; has `scoring_type`, `scoring_locked`, `hide_scores_until_complete` |
 | `division_members` | Competitor enrollment per division |
-| `division_judges` | Judge assignments per division |
+| `division_judges` | Judge assignments; has `judge_type` (incl. `shadow`) and `scores_included_in_leaderboard` |
 | `scores` | Judge scores (clicks, choreography, consistency, etc.) |
 | `rulesets` | Scoring rule definitions |
 | `leaderboard_tokens` | UUID tokens for public leaderboard sharing |
 | `schedule_entries` | Event schedule/timeline |
 
 **Enums** (from `lib/types/database.ts`):
-- `MemberRole`: `admin | judge | competitor | spectator`
-- `EventStatus`: `draft | published | completed`
-- `ScoringType`: varies by ruleset
-- `DivisionMemberStatus`, `JudgeType`, `RoundType`, `ScheduleEntryType`
+- `MemberRole`: `admin | judge | member`
+- `EventStatus`: `draft | published | active | completed | cancelled`
+- `ScoringType`: `standard | clicker | head_to_head`
+- `JudgeType`: `head | general | technical | performance | shadow`
+- `DivisionMemberStatus`, `RoundType`, `ScheduleEntryType`
+
+### Migrations
+
+Applied in order from `supabase/migrations/`:
+1. `001_*` — base schema (covered by `schema.sql`)
+2. `002_scoring_lock_and_hide.sql` — adds `scoring_locked` and `hide_scores_until_complete` to `divisions`
+3. `003_judge_included_and_shadow.sql` — adds `scores_included_in_leaderboard` to `division_judges`; extends `judge_type` with `shadow`
 
 ---
 
@@ -190,9 +205,75 @@ Typical pattern:
 3. Return `NextResponse.json()` with appropriate HTTP status codes.
 
 Important endpoints:
-- `POST /api/scores/sync` — accepts batched offline scores from the sync manager
-- `GET /api/leaderboard` — public leaderboard data (no auth required with valid token)
-- `POST /api/members` — admin-only member creation
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/scores` | `POST` | judge | Submit/overwrite a score |
+| `/api/scores/sync` | `POST` | judge | Batch offline score sync |
+| `/api/divisions/[id]/lock` | `PATCH` | head judge / admin | Toggle `scoring_locked` on a division |
+| `/api/divisions/[id]/visualiser` | `GET` | head judge / admin | Panel analytics data |
+| `/api/divisions/[id]/judges` | `GET/POST/PATCH` | admin | Manage judge assignments and `scores_included_in_leaderboard` |
+| `/api/leaderboard/[divisionId]` | `GET` | public (token) | Leaderboard; respects `hide_scores_until_complete` |
+| `/api/members` | `POST` | admin | Create a member |
+
+---
+
+## Head Judge & Scoring Control Features
+
+These features are available to **head judges** (and admins) only.
+
+### Division Scoring Lock
+
+A head judge can lock/unlock a division via `PATCH /api/divisions/[id]/lock` with `{ scoring_locked: boolean }`.
+
+- When `scoring_locked = true`, the scores API returns `403` for any new score submissions in that division.
+- The `LockDivisionButton` component (`components/judge/LockDivisionButton.tsx`) provides the UI toggle.
+
+### Score Overwrite UX
+
+When a judge attempts to submit a score for a participant they have already scored:
+- The UI shows a confirmation dialog before overwriting.
+- The scoring form displays the `updated_at` timestamp of the existing score so judges know it was previously submitted.
+
+### Hide Leaderboard Until Complete
+
+Divisions have an optional `hide_scores_until_complete` flag (set in the admin division form via the "Hide leaderboard until complete" switch).
+
+- When `true`, the public leaderboard API returns a message instead of scores until the division's `scoring_locked = true`.
+- `components/leaderboard/` renders a "scores hidden" state in this case.
+
+### Head Judge Visualiser
+
+A dedicated **Visualiser** tab appears on the judge division page for head judges only (`components/judge/JudgeVisualiser.tsx`, `components/judge/DivisionPageTabs.tsx`).
+
+**Data source**: `GET /api/divisions/[id]/visualiser` — returns participants, judges, all scores (submitted + draft), panel stats, outliers, and judge summaries.
+
+**Analytics** (computed server-side in `lib/utils/judge-analytics.ts`):
+
+| Function | Description |
+|----------|-------------|
+| `computeParticipantPanelStats()` | Mean and std dev of `total_score` per participant across all judges |
+| `computeOutliers()` | Scores where `|deviation| > max(1.5 × stdDev, 2.0)` |
+| `computeJudgeSummaries()` | Per-judge: avg absolute deviation from panel mean, outlier count |
+
+**Charts** (rendered with `recharts`):
+- Grouped bar chart of scores by participant (one bar per judge)
+- Judge deviation chart with red highlight when `|deviation| > 2`
+- Outlier list table
+- Panel status card showing excluded/shadow judges
+
+Draft scores are included in the visualiser with a "draft" banner. A refresh button re-fetches data.
+
+### Judge Exclusion & Shadow Judge
+
+**`scores_included_in_leaderboard`** (`division_judges` column, default `true`):
+- Head judge or admin can toggle this per judge via the admin `DivisionJudges` component.
+- When `false`, that judge's scores are excluded from leaderboard calculations and visualiser panel stats.
+
+**`shadow` judge type** (extends `JudgeType` enum):
+- Shadow judges are assigned for training; their scores **never** count regardless of `scores_included_in_leaderboard`.
+- Visible in admin dropdown as "Shadow (training)".
+- The visualiser's Panel Status card lists all excluded and shadow judges.
 
 ---
 
