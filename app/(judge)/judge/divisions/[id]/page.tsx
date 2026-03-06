@@ -160,7 +160,7 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
                         </p>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           {participant.member?.nickname && (
-                            <span>"{participant.member.nickname}"</span>
+                            <span>&ldquo;{participant.member.nickname}&rdquo;</span>
                           )}
                           {participant.member?.country && (
                             <span>• {participant.member.country}</span>

@@ -107,7 +107,6 @@ export async function POST(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await checkAdmin()
@@ -150,7 +149,6 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await checkAdmin()

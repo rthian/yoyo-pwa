@@ -4,7 +4,6 @@
  */
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -81,7 +80,7 @@ export default async function MemberDetailPage({ params }: MemberDetailPageProps
             )}
           </div>
           {member.nickname && (
-            <p className="text-muted-foreground">"{member.nickname}"</p>
+            <p className="text-muted-foreground">&ldquo;{member.nickname}&rdquo;</p>
           )}
         </div>
         <Link href={`/admin/members/${id}/edit`}>

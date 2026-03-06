@@ -52,7 +52,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('unhandledrejection', handleUnhandledRejection)
   }, [])
 
-  const fetchMember = useCallback(async (userId: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const fetchMember = useCallback(async (_userId: string) => {
     // Prevent concurrent fetches
     if (fetchingRef.current) return
     fetchingRef.current = true

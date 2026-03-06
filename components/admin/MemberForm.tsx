@@ -8,7 +8,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { createClient } from '@/lib/supabase/client'
 import { memberSchema, type MemberFormData } from '@/lib/validations'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,8 +32,6 @@ export default function MemberForm({ member }: MemberFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [password, setPassword] = useState('')
-  const supabase = createClient()
-
   const {
     register,
     handleSubmit,

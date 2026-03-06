@@ -3,7 +3,6 @@
  */
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft } from 'lucide-react'
 import MemberForm from '@/components/admin/MemberForm'

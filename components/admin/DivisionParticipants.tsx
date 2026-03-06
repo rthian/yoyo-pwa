@@ -66,7 +66,7 @@ export default function DivisionParticipants({ divisionId }: DivisionParticipant
   const [loading, setLoading] = useState(true)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [adding, setAdding] = useState(false)
-  const [reordering, setReordering] = useState(false)
+  const [, setReordering] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),

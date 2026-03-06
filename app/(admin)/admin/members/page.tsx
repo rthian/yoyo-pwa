@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Users, Search } from 'lucide-react'
+import { Plus, Users } from 'lucide-react'
 import MembersTable from '@/components/admin/MembersTable'
 
 export default async function MembersPage() {

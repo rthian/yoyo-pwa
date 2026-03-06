@@ -8,12 +8,10 @@ import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { 
-  Wifi, 
-  WifiOff, 
-  Cloud, 
-  CloudOff, 
+  Wifi,
+  WifiOff,
   RefreshCw,
-  Loader2 
+  Loader2
 } from 'lucide-react'
 import { 
   subscribeSyncStatus, 

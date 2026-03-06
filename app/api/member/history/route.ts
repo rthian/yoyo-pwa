@@ -68,9 +68,14 @@ export async function GET() {
       scoreMap.get(score.division_id)!.push(score.total_score || 0)
     }
 
+    type DivisionWithEvent = {
+      id: string; name: string; round_type: string | null
+      event: { id: string; name: string; event_date: string | null; location: string | null; status: string } | null
+    }
+
     // For ranking, fetch all scores per division the member participated in
     const divisionIds = (memberships || [])
-      .map(m => (m.division as any)?.id)
+      .map(m => (m.division as DivisionWithEvent)?.id)
       .filter(Boolean)
 
     const rankingMap = new Map<string, { rank: number; total: number }>()
@@ -105,7 +110,7 @@ export async function GET() {
 
     // Build history
     const history = (memberships || []).map(m => {
-      const division = m.division as any
+      const division = m.division as DivisionWithEvent
       const event = division?.event
       const divId = division?.id
       const memberScores = scoreMap.get(divId) || []

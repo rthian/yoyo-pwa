@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { CheckCircle2, ChevronRight, Trophy } from 'lucide-react'
 
 export default async function JudgeCompletedPage() {

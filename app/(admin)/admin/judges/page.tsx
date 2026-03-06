@@ -131,7 +131,7 @@ export default async function JudgesPage() {
                       </Link>
                       {judge.nickname && (
                         <p className="text-sm text-muted-foreground">
-                          "{judge.nickname}"
+                          &ldquo;{judge.nickname}&rdquo;
                         </p>
                       )}
                     </TableCell>
@@ -159,7 +159,7 @@ export default async function JudgesPage() {
             <div className="text-center py-8 text-muted-foreground">
               <Gavel className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No judges found.</p>
-              <p className="text-sm">Add a member with the "Judge" role to get started.</p>
+              <p className="text-sm">Add a member with the &ldquo;Judge&rdquo; role to get started.</p>
             </div>
           )}
         </CardContent>
