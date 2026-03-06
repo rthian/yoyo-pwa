@@ -105,23 +105,78 @@ export async function POST(
   }
 }
 
+async function checkAdminOrHeadJudge(divisionId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { user: null, isAdmin: false, isHeadJudge: false }
+
+  const supabaseAdmin = createAdminClient()
+  const { data: member } = await supabaseAdmin
+    .from('members')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  const isAdmin = member?.role === 'admin'
+  if (isAdmin) return { user, isAdmin: true, isHeadJudge: false }
+
+  const { data: assignment } = await supabaseAdmin
+    .from('division_judges')
+    .select('judge_type')
+    .eq('division_id', divisionId)
+    .eq('member_id', user.id)
+    .single()
+
+  const isHeadJudge = assignment?.judge_type === 'head'
+  return { user, isAdmin: false, isHeadJudge }
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await checkAdmin()
-    if (!user) {
+    const { id: divisionId } = await params
+    const { user, isAdmin, isHeadJudge } = await checkAdminOrHeadJudge(divisionId)
+
+    if (!user || (!isAdmin && !isHeadJudge)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
     const supabaseAdmin = createAdminClient()
 
+    const assignmentId = body.assignmentId
+    if (!assignmentId) {
+      return NextResponse.json({ error: 'assignmentId required' }, { status: 400 })
+    }
+
+    const updates: { judge_type?: string; scores_included_in_leaderboard?: boolean } = {}
+    if (isAdmin && body.judge_type !== undefined) {
+      updates.judge_type = body.judge_type
+    }
+    if ((isAdmin || isHeadJudge) && body.scores_included_in_leaderboard !== undefined) {
+      updates.scores_included_in_leaderboard = Boolean(body.scores_included_in_leaderboard)
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
+    }
+
+    const { data: existing } = await supabaseAdmin
+      .from('division_judges')
+      .select('division_id')
+      .eq('id', assignmentId)
+      .single()
+
+    if (!existing || existing.division_id !== divisionId) {
+      return NextResponse.json({ error: 'Assignment not found' }, { status: 404 })
+    }
+
     const { error } = await supabaseAdmin
       .from('division_judges')
-      .update({ judge_type: body.judge_type })
-      .eq('id', body.assignmentId)
+      .update(updates)
+      .eq('id', assignmentId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })

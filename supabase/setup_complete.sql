@@ -78,7 +78,8 @@ CREATE TABLE IF NOT EXISTS division_judges (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   division_id UUID NOT NULL REFERENCES divisions(id) ON DELETE CASCADE,
   member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
-  judge_type VARCHAR(50) DEFAULT 'general' CHECK (judge_type IN ('head', 'general', 'technical', 'performance')),
+  judge_type VARCHAR(50) DEFAULT 'general' CHECK (judge_type IN ('head', 'general', 'technical', 'performance', 'shadow')),
+  scores_included_in_leaderboard BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(division_id, member_id)
 );

@@ -49,6 +49,7 @@ export default function DivisionForm({ eventId, division }: DivisionFormProps) {
       scoring_type: division?.scoring_type || 'standard',
       sort_order: division?.sort_order || 0,
       is_active: division?.is_active ?? true,
+      hide_scores_until_complete: division?.hide_scores_until_complete ?? false,
       round_type: division?.round_type || undefined,
       scheduled_start: division?.scheduled_start ? new Date(division.scheduled_start).toISOString().slice(0, 16) : '',
       scheduled_end: division?.scheduled_end ? new Date(division.scheduled_end).toISOString().slice(0, 16) : '',
@@ -58,6 +59,7 @@ export default function DivisionForm({ eventId, division }: DivisionFormProps) {
 
   const scoringType = watch('scoring_type')
   const isActive = watch('is_active')
+  const hideScoresUntilComplete = watch('hide_scores_until_complete')
   const roundType = watch('round_type')
 
   const onSubmit = async (data: DivisionFormData) => {
@@ -236,6 +238,20 @@ export default function DivisionForm({ eventId, division }: DivisionFormProps) {
           id="is_active"
           checked={isActive}
           onCheckedChange={(checked) => setValue('is_active', checked)}
+        />
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border p-4">
+        <div className="space-y-0.5">
+          <Label htmlFor="hide_scores_until_complete" className="text-base">Hide Leaderboard Until Complete</Label>
+          <p className="text-sm text-muted-foreground">
+            Show &quot;Scoring in progress&quot; on public leaderboard until head judge locks the division
+          </p>
+        </div>
+        <Switch
+          id="hide_scores_until_complete"
+          checked={hideScoresUntilComplete}
+          onCheckedChange={(checked) => setValue('hide_scores_until_complete', checked)}
         />
       </div>
 

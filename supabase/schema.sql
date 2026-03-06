@@ -52,6 +52,8 @@ CREATE TABLE divisions (
   scoring_type VARCHAR(50) DEFAULT 'standard' CHECK (scoring_type IN ('standard', 'clicker', 'head_to_head')),
   sort_order INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT true,
+  scoring_locked BOOLEAN DEFAULT false,
+  hide_scores_until_complete BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -82,7 +84,8 @@ CREATE TABLE division_judges (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   division_id UUID NOT NULL REFERENCES divisions(id) ON DELETE CASCADE,
   member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
-  judge_type VARCHAR(50) DEFAULT 'general' CHECK (judge_type IN ('head', 'general', 'technical', 'performance')),
+  judge_type VARCHAR(50) DEFAULT 'general' CHECK (judge_type IN ('head', 'general', 'technical', 'performance', 'shadow')),
+  scores_included_in_leaderboard BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(division_id, member_id)
 );

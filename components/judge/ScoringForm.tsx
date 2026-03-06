@@ -174,6 +174,11 @@ export default function ScoringForm({
             {participant.member.country && (
               <p className="text-sm text-muted-foreground">{participant.member.country}</p>
             )}
+            {existingScore?.updated_at && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Last updated: {new Date(existingScore.updated_at).toLocaleString()}
+              </p>
+            )}
           </div>
           <Badge variant="outline">#{participant.play_order || '?'}</Badge>
         </CardContent>
@@ -295,12 +300,21 @@ export default function ScoringForm({
               <AlertDialogHeader>
                 <AlertDialogTitle className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-green-500" />
-                  Confirm Submission
+                  {existingScore?.is_submitted ? 'Overwrite Submitted Score?' : 'Confirm Submission'}
                 </AlertDialogTitle>
                 <AlertDialogDescription asChild>
                   <div className="text-muted-foreground text-sm text-left space-y-2">
-                    <span className="block">You are about to submit scores for:</span>
-                    <span className="block font-semibold text-foreground">{participant.member.full_name}</span>
+                    {existingScore?.is_submitted ? (
+                      <>
+                        <span className="block">You are about to overwrite an existing submitted score for <strong className="text-foreground">{participant.member.full_name}</strong>. This will replace the previous submission.</span>
+                        <span className="block text-amber-600 dark:text-amber-400 font-medium">Continue?</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="block">You are about to submit scores for:</span>
+                        <span className="block font-semibold text-foreground">{participant.member.full_name}</span>
+                      </>
+                    )}
                     <div className="mt-3 p-3 bg-muted rounded-lg">
                       <div className="flex justify-between text-sm">
                         <span>Technical:</span>
