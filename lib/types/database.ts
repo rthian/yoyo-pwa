@@ -7,7 +7,7 @@ export type MemberRole = 'admin' | 'judge' | 'member'
 export type EventStatus = 'draft' | 'published' | 'active' | 'completed' | 'cancelled'
 export type ScoringType = 'standard' | 'clicker' | 'head_to_head'
 export type DivisionMemberStatus = 'registered' | 'checked_in' | 'playing' | 'completed' | 'withdrawn'
-export type JudgeType = 'head' | 'general' | 'technical' | 'performance'
+export type JudgeType = 'head' | 'general' | 'technical' | 'performance' | 'shadow'
 export type RoundType = 'wildcard' | 'qualifier' | 'semi_final' | 'final' | 'exhibition' | 'other'
 export type ScheduleEntryType = 'ceremony' | 'break' | 'registration' | 'other'
 
@@ -44,6 +44,8 @@ export interface Division {
   scoring_type: ScoringType
   sort_order: number
   is_active: boolean
+  scoring_locked?: boolean
+  hide_scores_until_complete?: boolean
   round_type: RoundType | null
   scheduled_start: string | null
   scheduled_end: string | null
@@ -67,6 +69,7 @@ export interface DivisionJudge {
   division_id: string
   member_id: string
   judge_type: JudgeType
+  scores_included_in_leaderboard?: boolean
   created_at: string
 }
 

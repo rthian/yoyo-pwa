@@ -57,7 +57,34 @@ export default function PublicLeaderboardPage({ params }: PageProps) {
 
   if (!data) return null
 
-  const { division, leaderboard, lastUpdated } = data
+  const { division, leaderboard, lastUpdated, scoresHidden } = data
+
+  if (scoresHidden) {
+    return (
+      <div className="min-h-screen bg-background p-4">
+        <div className="max-w-2xl mx-auto space-y-4">
+          <div className="text-center py-4">
+            <p className="text-sm text-muted-foreground mb-1 tracking-tight">
+              {division.event.name}
+            </p>
+            <h1 className="text-2xl font-bold tracking-tight">{division.name}</h1>
+          </div>
+          <Card>
+            <CardContent className="py-16 text-center">
+              <p className="text-muted-foreground text-lg">
+                Scoring in progress. Results will be shown when the division is complete.
+              </p>
+            </CardContent>
+          </Card>
+          <div className="text-center text-sm text-muted-foreground py-4">
+            <p>YoYo League</p>
+            <p className="text-xs mt-1">© {new Date().getFullYear()} YoYo League. Created by <a href="https://github.com/rthian" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">rthian</a>.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const scored = leaderboard.filter((e) => e.scoreCount > 0)
   const top3 = scored.filter((e) => e.rank !== null && e.rank <= 3) as Array<(typeof scored)[0] & { rank: number }>
   const rest = scored.filter((e) => e.rank === null || e.rank > 3)

@@ -72,6 +72,19 @@ export async function GET(request: Request, { params }: RouteParams) {
       )
     }
 
+    const scoresHidden =
+      division.hide_scores_until_complete === true &&
+      division.scoring_locked !== true
+
+    if (scoresHidden) {
+      return NextResponse.json({
+        division,
+        leaderboard: [],
+        lastUpdated: new Date().toISOString(),
+        scoresHidden: true,
+      })
+    }
+
     // Get all participants with their scores
     const { data: participants } = await supabaseAdmin
       .from('division_members')
@@ -88,8 +101,25 @@ export async function GET(request: Request, { params }: RouteParams) {
         division,
         leaderboard: [],
         lastUpdated: new Date().toISOString(),
+        scoresHidden: false,
       })
     }
+
+    // Judges whose scores count: included in leaderboard and not shadow
+    const { data: divisionJudges } = await supabaseAdmin
+      .from('division_judges')
+      .select('member_id, judge_type, scores_included_in_leaderboard')
+      .eq('division_id', divisionId)
+
+    const countingJudgeIds = new Set(
+      (divisionJudges ?? [])
+        .filter(
+          (j: { member_id: string; judge_type: string; scores_included_in_leaderboard?: boolean }) =>
+            j.judge_type !== 'shadow' &&
+            (j.scores_included_in_leaderboard !== false)
+        )
+        .map((j: { member_id: string }) => j.member_id)
+    )
 
     // Get submitted scores for each participant
     const { data: scores } = await supabaseAdmin
@@ -98,13 +128,13 @@ export async function GET(request: Request, { params }: RouteParams) {
       .eq('division_id', divisionId)
       .eq('is_submitted', true)
 
-    // Calculate averages for each participant
+    // Calculate averages using only counting judges
     type ParticipantMember = { id: string; full_name: string; nickname: string | null; country: string | null } | null
     const leaderboard = participants.map(participant => {
       const member = participant.member as unknown as ParticipantMember
-      const participantScores = scores?.filter(
-        s => s.division_member_id === participant.id
-      ) || []
+      const participantScores = (scores?.filter(
+        s => s.division_member_id === participant.id && countingJudgeIds.has(s.judge_id)
+      ) || [])
 
       const scoreCount = participantScores.length
       
@@ -169,6 +199,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       division,
       leaderboard,
       lastUpdated: new Date().toISOString(),
+      scoresHidden: false,
     })
   } catch (error) {
     console.error('Leaderboard API error:', error)

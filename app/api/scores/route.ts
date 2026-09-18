@@ -67,6 +67,20 @@ export async function POST(request: Request) {
       )
     }
 
+    // Check if division is locked
+    const { data: division } = await supabaseAdmin
+      .from('divisions')
+      .select('scoring_locked')
+      .eq('id', scoreData.division_id)
+      .single()
+
+    if (division?.scoring_locked) {
+      return NextResponse.json(
+        { error: 'Division is locked. No scores can be submitted or updated.' },
+        { status: 403 }
+      )
+    }
+
     // Calculate score totals
     const technical = (scoreData.ex_clicks || 0) * 0.1 + 
       (scoreData.ex_pv || 0) + 
@@ -100,6 +114,7 @@ export async function POST(request: Request) {
       )
     }
 
+    const now = new Date().toISOString()
     const finalScoreData = {
       ...scoreData,
       judge_id: user.id,
@@ -107,7 +122,8 @@ export async function POST(request: Request) {
       performance_score: performance,
       total_score: total,
       is_submitted: isSubmit,
-      submitted_at: isSubmit ? new Date().toISOString() : null,
+      submitted_at: isSubmit ? now : null,
+      ...(existingScore && { updated_at: now }),
     }
 
     let result
