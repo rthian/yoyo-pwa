@@ -9,11 +9,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { 
-  ArrowLeft, 
-  User, 
-  CheckCircle2, 
-  Clock, 
+import {
+  ArrowLeft,
+  User,
+  CheckCircle2,
+  Clock,
   ChevronRight,
   Trophy,
   Lock
@@ -29,9 +29,9 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
   const { id: divisionId } = await params
   const supabase = await createClient()
   const supabaseAdmin = createAdminClient()
-  
+
   const { data: { user } } = await supabase.auth.getUser()
-  
+
   if (!user) {
     redirect('/login')
   }
@@ -130,37 +130,40 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
             </span>
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-primary transition-all"
-              style={{ 
-                width: totalParticipants > 0 
-                  ? `${(completedCount / totalParticipants) * 100}%` 
-                  : '0%' 
+              style={{
+                width: totalParticipants > 0
+                  ? `${(completedCount / totalParticipants) * 100}%`
+                  : '0%'
               }}
             />
           </div>
         </CardContent>
       </Card>
 
-      {/* Participants List */}
-      <div className="space-y-2">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Trophy className="h-5 w-5" />
-          Participants
-        </h2>
-        
-        {participants && participants.length > 0 ? (
-          <div className="space-y-2">
-            {participants.map((participant, index) => {
-              const score = scoresMap[participant.id]
-              const isScored = score?.is_submitted
+      <DivisionPageTabs divisionId={divisionId} isHeadJudgeOrAdmin={isHeadJudgeOrAdmin}>
+        {/* Participants List */}
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Trophy className="h-5 w-5" />
+            Participants
+            {scoringLocked && (
+              <Badge variant="secondary" className="ml-auto flex items-center gap-1">
+                <Lock className="h-3 w-3" />
+                Locked
+              </Badge>
+            )}
+          </h2>
 
-              return (
-                <Link
-                  key={participant.id}
-                  href={`/judge/divisions/${divisionId}/score/${participant.id}`}
-                >
-                  <Card className={`hover:bg-accent transition-colors active:scale-[0.98] ${isScored ? 'border-green-500/50' : ''}`}>
+          {participants && participants.length > 0 ? (
+            <div className="space-y-2">
+              {participants.map((participant, index) => {
+                const score = scoresMap[participant.id]
+                const isScored = score?.is_submitted
+
+                const cardContent = (
+                  <Card className={`hover:bg-accent transition-colors active:scale-[0.98] ${isScored ? 'border-green-500/50' : ''} ${scoringLocked ? 'opacity-75' : ''}`}>
                     <CardContent className="flex items-center gap-4 p-4">
                       {/* Order number */}
                       <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
@@ -190,45 +193,22 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
                           <span className="text-sm font-medium text-green-600 dark:text-green-400">
                             {score.total_score?.toFixed(1)}
                           </span>
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
                         </div>
-
-                        {/* Participant info */}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold truncate">
-                            {participant.member?.full_name}
-                          </p>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            {participant.member?.nickname && (
-                              <span>"{participant.member.nickname}"</span>
-                            )}
-                            {participant.member?.country && (
-                              <span>• {participant.member.country}</span>
-                            )}
-                          </div>
+                      ) : score ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-yellow-600">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Draft
+                          </Badge>
                         </div>
+                      ) : (
+                        <Badge variant="secondary">Score</Badge>
+                      )}
 
-                        {/* Score status */}
-                        {isScored ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                              {score.total_score?.toFixed(1)}
-                            </span>
-                            <CheckCircle2 className="h-5 w-5 text-green-500" />
-                          </div>
-                        ) : score ? (
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-yellow-600">
-                              <Clock className="h-3 w-3 mr-1" />
-                              Draft
-                            </Badge>
-                          </div>
-                        ) : (
-                          <Badge variant="secondary">Score</Badge>
-                        )}
-
-                        <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                      </CardContent>
-                    </Card>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    </CardContent>
+                  </Card>
                 )
 
                 return scoringLocked ? (
