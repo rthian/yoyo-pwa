@@ -82,7 +82,7 @@ export async function GET() {
     }
 
     for (const membership of memberships || []) {
-      const division = membership.division as DivisionWithEvent
+      const division = membership.division as unknown as DivisionWithEvent
       if (!division?.event) continue
 
       const event = division.event
