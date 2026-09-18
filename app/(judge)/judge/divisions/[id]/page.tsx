@@ -120,61 +120,75 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
         />
       </div>
 
-      {/* Locked Banner */}
-      {scoringLocked && (
-        <Card className="border-amber-500/50 bg-amber-500/10">
-          <CardContent className="flex items-center gap-2 p-4">
-            <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            <p className="font-medium text-amber-800 dark:text-amber-200">
-              Division locked — no new scores can be submitted or updated.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      {/* Progress */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Progress</span>
+            <span className="text-sm text-muted-foreground">
+              {completedCount} / {totalParticipants}
+            </span>
+          </div>
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-primary transition-all"
+              style={{ 
+                width: totalParticipants > 0 
+                  ? `${(completedCount / totalParticipants) * 100}%` 
+                  : '0%' 
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-      <DivisionPageTabs divisionId={divisionId} isHeadJudgeOrAdmin={isHeadJudgeOrAdmin}>
-        {/* Progress */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Progress</span>
-              <span className="text-sm text-muted-foreground">
-                {completedCount} / {totalParticipants}
-              </span>
-            </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary transition-all"
-                style={{ 
-                  width: totalParticipants > 0 
-                    ? `${(completedCount / totalParticipants) * 100}%` 
-                    : '0%' 
-                }}
-              />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Participants List */}
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Trophy className="h-5 w-5" />
+          Participants
+        </h2>
+        
+        {participants && participants.length > 0 ? (
+          <div className="space-y-2">
+            {participants.map((participant, index) => {
+              const score = scoresMap[participant.id]
+              const isScored = score?.is_submitted
 
-        {/* Participants List */}
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Trophy className="h-5 w-5" />
-            Participants
-          </h2>
-          
-          {participants && participants.length > 0 ? (
-            <div className="space-y-2">
-              {participants.map((participant, index) => {
-                const score = scoresMap[participant.id]
-                const isScored = score?.is_submitted
+              return (
+                <Link
+                  key={participant.id}
+                  href={`/judge/divisions/${divisionId}/score/${participant.id}`}
+                >
+                  <Card className={`hover:bg-accent transition-colors active:scale-[0.98] ${isScored ? 'border-green-500/50' : ''}`}>
+                    <CardContent className="flex items-center gap-4 p-4">
+                      {/* Order number */}
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-bold">
+                          {participant.play_order || index + 1}
+                        </span>
+                      </div>
 
-                const cardContent = (
-                    <Card className={`transition-colors ${!scoringLocked && 'hover:bg-accent active:scale-[0.98]'} ${scoringLocked && 'opacity-75'} ${isScored ? 'border-green-500/50' : ''}`}>
-                      <CardContent className="flex items-center gap-4 p-4">
-                        {/* Order number */}
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-bold">
-                            {participant.play_order || index + 1}
+                      {/* Participant info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">
+                          {participant.member?.full_name}
+                        </p>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          {participant.member?.nickname && (
+                            <span>&ldquo;{participant.member.nickname}&rdquo;</span>
+                          )}
+                          {participant.member?.country && (
+                            <span>• {participant.member.country}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Score status */}
+                      {isScored ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                            {score.total_score?.toFixed(1)}
                           </span>
                         </div>
 

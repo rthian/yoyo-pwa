@@ -74,8 +74,15 @@ export async function GET() {
       }>
     }>()
 
+    type DivisionWithEvent = {
+      id: string; name: string; description: string | null; round_type: string | null
+      scheduled_start: string | null; scheduled_end: string | null
+      venue: string | null; sort_order: number | null
+      event: { id: string; name: string; event_date: string | null; location: string | null; status: string } | null
+    }
+
     for (const membership of memberships || []) {
-      const division = membership.division as any
+      const division = membership.division as DivisionWithEvent
       if (!division?.event) continue
 
       const event = division.event

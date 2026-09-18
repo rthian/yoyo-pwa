@@ -37,6 +37,7 @@ export default function NumberStepper({
   const longPressInterval = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setInputValue(isInteger ? value.toString() : value.toFixed(1))
   }, [value, isInteger])
 

@@ -62,7 +62,6 @@ export default function ScoringForm({
   division,
   participant,
   existingScore,
-  judgeId,
 }: ScoringFormProps) {
   const router = useRouter()
   
@@ -169,7 +168,7 @@ export default function ScoringForm({
           <div className="flex-1 min-w-0">
             <p className="font-bold text-lg">{participant.member.full_name}</p>
             {participant.member.nickname && (
-              <p className="text-muted-foreground">"{participant.member.nickname}"</p>
+              <p className="text-muted-foreground">&ldquo;{participant.member.nickname}&rdquo;</p>
             )}
             {participant.member.country && (
               <p className="text-sm text-muted-foreground">{participant.member.country}</p>

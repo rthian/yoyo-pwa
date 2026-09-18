@@ -4,7 +4,6 @@
  */
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,7 +17,6 @@ import {
   BarChart3,
   Plus,
   ArrowRight,
-  Loader2,
 } from 'lucide-react'
 import type { Member } from '@/lib/types/database'
 
@@ -26,41 +24,7 @@ interface AdminDashboardViewProps {
   member: Member
 }
 
-interface DashboardStats {
-  totalEvents: number
-  activeEvents: number
-  totalMembers: number
-  totalDivisions: number
-}
-
 export default function AdminDashboardView({ member }: AdminDashboardViewProps) {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [recentEvents, setRecentEvents] = useState<Array<{
-    id: string
-    name: string
-    status: string
-    event_date: string | null
-  }>>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    async function fetchDashboardData() {
-      try {
-        // Fetch events for stats
-        const eventsRes = await fetch('/api/events')
-        if (eventsRes.ok) {
-          // Events API might not exist as a list route, fallback gracefully
-        }
-      } catch {
-        // Gracefully handle missing endpoints
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchDashboardData()
-  }, [])
-
   return (
     <main className="min-h-screen bg-gradient-to-b from-background to-muted">
       <div className="container mx-auto px-4 py-8">

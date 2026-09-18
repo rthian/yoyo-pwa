@@ -5,7 +5,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { BarChart3, Calendar, Users, Trophy, TrendingUp } from 'lucide-react'
+import { Calendar, Users, Trophy, TrendingUp } from 'lucide-react'
 
 export default async function ReportsPage() {
   const supabase = createAdminClient()
