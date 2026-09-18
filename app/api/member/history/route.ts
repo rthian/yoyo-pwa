@@ -75,7 +75,7 @@ export async function GET() {
 
     // For ranking, fetch all scores per division the member participated in
     const divisionIds = (memberships || [])
-      .map(m => (m.division as DivisionWithEvent)?.id)
+      .map(m => (m.division as unknown as DivisionWithEvent)?.id)
       .filter(Boolean)
 
     const rankingMap = new Map<string, { rank: number; total: number }>()
@@ -110,7 +110,7 @@ export async function GET() {
 
     // Build history
     const history = (memberships || []).map(m => {
-      const division = m.division as DivisionWithEvent
+      const division = m.division as unknown as DivisionWithEvent
       const event = division?.event
       const divId = division?.id
       const memberScores = scoreMap.get(divId) || []
