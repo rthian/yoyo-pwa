@@ -20,11 +20,12 @@ export const memberSchema = z.object({
   role: z.enum(['admin', 'judge', 'member']),
   country: z.string().optional(),
   is_active: z.boolean(),
+  home_geo_id: z.string().uuid().optional().nullable(),
 })
 
 export type MemberFormData = z.infer<typeof memberSchema>
 
-// Event schemas
+// Event schemas — used by app/api/events/route.ts + EventForm
 export const eventSchema = z.object({
   name: z.string().min(2, 'Event name must be at least 2 characters'),
   description: z.string().optional(),
@@ -32,11 +33,14 @@ export const eventSchema = z.object({
   event_date: z.string().optional(),
   status: z.enum(['draft', 'published', 'active', 'completed', 'cancelled']),
   ruleset_id: z.string().uuid('Invalid ruleset ID').optional().nullable(),
+  season_id: z.string().uuid().optional().nullable(),
+  tier_id: z.string().uuid().optional().nullable(),
+  geo_id: z.string().uuid().optional().nullable(),
 })
 
 export type EventFormData = z.infer<typeof eventSchema>
 
-// Division schemas
+// Division schemas — used by app/api/divisions + DivisionForm
 export const divisionSchema = z.object({
   event_id: z.string().uuid('Invalid event ID'),
   name: z.string().min(2, 'Division name must be at least 2 characters'),
@@ -50,6 +54,9 @@ export const divisionSchema = z.object({
   scheduled_start: z.string().optional().nullable(),
   scheduled_end: z.string().optional().nullable(),
   venue: z.string().optional().nullable(),
+  category_id: z.string().uuid().optional().nullable(),
+  eligibility: z.enum(['open', 'women', 'youth', 'masters']).optional().nullable(),
+  field_scope: z.enum(['championship', 'invitational']).optional().nullable(),
 })
 
 export type DivisionFormData = z.infer<typeof divisionSchema>

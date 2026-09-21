@@ -41,16 +41,19 @@ export function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  // During build time, return a placeholder client that will error on use
+  // Placeholder when env is missing — allows UI preview; auth calls will fail softly
   if (!supabaseUrl || !supabaseAnonKey) {
-    // Return a mock client for build time - real client created at runtime
-    if (typeof window === 'undefined') {
-      return createBrowserClient(
-        'https://placeholder.supabase.co',
-        'placeholder-key'
-      )
-    }
-    throw new Error('Missing Supabase environment variables')
+    return createBrowserClient(
+      'https://placeholder.supabase.co',
+      'placeholder-key',
+      {
+        auth: {
+          lock: customLock,
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
+    )
   }
 
   return createBrowserClient(supabaseUrl, supabaseAnonKey, {

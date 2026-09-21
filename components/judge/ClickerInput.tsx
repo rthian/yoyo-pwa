@@ -100,7 +100,7 @@ export default function ClickerInput({
           type="button"
           aria-label={`Decrease ${label}`}
           className={cn(
-            'flex-1 min-h-[56px] flex items-center justify-center touch-manipulation active:opacity-80 transition-opacity',
+            'flex-1 min-h-[72px] flex items-center justify-center touch-manipulation active:scale-[0.98] transition-transform',
             isDestructive
               ? 'bg-destructive/20 text-destructive border-r border-destructive/30'
               : 'bg-destructive/10 text-destructive border-r border-destructive/20 dark:bg-destructive/15 dark:border-destructive/25'
@@ -114,11 +114,11 @@ export default function ClickerInput({
           onTouchCancel={stopLongPress}
           disabled={value <= min}
         >
-          <Minus className="h-8 w-8" strokeWidth={2.5} />
+          <Minus className="h-9 w-9" strokeWidth={2.5} />
         </button>
         <div
           className={cn(
-            'min-w-[80px] flex items-center justify-center font-mono text-2xl font-bold tabular-nums bg-muted/50',
+            'min-w-[88px] flex items-center justify-center font-mono text-3xl font-bold tabular-nums bg-muted/50',
             isDestructive && 'text-destructive'
           )}
         >
@@ -128,7 +128,7 @@ export default function ClickerInput({
           type="button"
           aria-label={`Increase ${label}`}
           className={cn(
-            'flex-1 min-h-[56px] flex items-center justify-center touch-manipulation active:opacity-80 transition-opacity',
+            'flex-1 min-h-[72px] flex items-center justify-center touch-manipulation active:scale-[0.98] transition-transform',
             'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-l border-emerald-500/30'
           )}
           onClick={handleIncrement}
@@ -140,7 +140,7 @@ export default function ClickerInput({
           onTouchCancel={stopLongPress}
           disabled={value >= max}
         >
-          <Plus className="h-8 w-8" strokeWidth={2.5} />
+          <Plus className="h-9 w-9" strokeWidth={2.5} />
         </button>
       </div>
     </div>

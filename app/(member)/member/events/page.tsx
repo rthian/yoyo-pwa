@@ -16,7 +16,9 @@ import {
   CheckCircle,
   UserPlus,
   Clock,
+  ExternalLink,
 } from 'lucide-react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 
 interface BrowseEvent {
@@ -156,12 +158,16 @@ export default function MemberEventsPage() {
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <CardTitle className="text-xl">{event.name}</CardTitle>
+                    <CardTitle className="text-xl">
+                      <Link href={`/events/${event.id}`} className="hover:underline">
+                        {event.name}
+                      </Link>
+                    </CardTitle>
                     {event.description && (
                       <CardDescription className="mt-1">{event.description}</CardDescription>
                     )}
                   </div>
-                  <div className="flex gap-2 flex-shrink-0">
+                  <div className="flex gap-2 flex-shrink-0 items-start flex-wrap justify-end">
                     <Badge className={statusColors[event.status] || ''}>
                       {event.status.replace('_', ' ')}
                     </Badge>
@@ -170,6 +176,12 @@ export default function MemberEventsPage() {
                         Registration Open
                       </Badge>
                     )}
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/events/${event.id}`}>
+                        <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                        Event hub
+                      </Link>
+                    </Button>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">

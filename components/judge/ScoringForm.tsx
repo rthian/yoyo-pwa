@@ -24,14 +24,27 @@ import {
 import { ArrowLeft, Save, Send, Loader2, User, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import ClickerInput from './ClickerInput'
-import type { Division, DivisionMember, Score, Member } from '@/lib/types/database'
+import JudgeRulesSheet from './JudgeRulesSheet'
+import { generateClientId, saveOfflineScore } from '@/lib/offline/queue'
+import type { Division, DivisionMember, Score, Member, Ruleset, ScoringType } from '@/lib/types/database'
 
 interface ParticipantWithMember extends DivisionMember {
   member: Member
 }
 
+type JudgeRuleset = Pick<
+  Ruleset,
+  'id' | 'name' | 'code' | 'version' | 'source_url' | 'rules_content' | 'scoring_config'
+>
+
 interface DivisionWithEvent extends Division {
-  event: { id: string; name: string; status: string }
+  event: {
+    id: string
+    name: string
+    status: string
+    ruleset_id?: string | null
+    ruleset?: JudgeRuleset | JudgeRuleset[] | null
+  }
 }
 
 interface ScoringFormProps {
@@ -39,6 +52,19 @@ interface ScoringFormProps {
   participant: ParticipantWithMember
   existingScore: Score | null
   judgeId: string
+}
+
+function oneRuleset(
+  value: JudgeRuleset | JudgeRuleset[] | null | undefined
+): JudgeRuleset | null {
+  if (!value) return null
+  return Array.isArray(value) ? value[0] ?? null : value
+}
+
+const scoringTypeLabels: Record<ScoringType, string> = {
+  standard: 'Standard',
+  clicker: 'Clicker',
+  head_to_head: 'H2H',
 }
 
 // Score field configuration
@@ -97,9 +123,25 @@ export default function ScoringForm({
   }, [scores])
 
   const totals = calculateTotals()
+  const event = Array.isArray(division.event) ? division.event[0] : division.event
+  const ruleset = oneRuleset(event?.ruleset)
+  const scoringType = (division.scoring_type || 'standard') as ScoringType
+
 
   const handleScoreChange = (key: ScoreKey, value: number) => {
     setScores(prev => ({ ...prev, [key]: value }))
+  }
+
+  const saveOffline = async () => {
+    await saveOfflineScore({
+      clientId: generateClientId(),
+      divisionId: division.id,
+      divisionMemberId: participant.id,
+      judgeId,
+      scoreData: scores,
+      timestamp: Date.now(),
+    })
+    toast.success('Saved offline — will sync when you are back online')
   }
 
   const saveScore = async (isSubmit: boolean) => {
@@ -107,6 +149,11 @@ export default function ScoringForm({
     actionLabel(true)
 
     try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await saveOffline()
+        return
+      }
+
       const scorePayload = {
         division_id: division.id,
         division_member_id: participant.id,
@@ -133,6 +180,17 @@ export default function ScoringForm({
       
       router.refresh()
     } catch (error) {
+      const offline =
+        (typeof navigator !== 'undefined' && !navigator.onLine) ||
+        (error instanceof TypeError)
+      if (offline) {
+        try {
+          await saveOffline()
+          return
+        } catch (queueErr) {
+          console.error(queueErr)
+        }
+      }
       console.error('Error saving score:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to save score')
     } finally {
@@ -141,22 +199,40 @@ export default function ScoringForm({
   }
 
   return (
-    <div className="space-y-4 pb-24">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Link href={`/judge/divisions/${division.id}`}>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-bold truncate">Score Entry</h1>
-          <p className="text-sm text-muted-foreground truncate">
-            {division.name}
-          </p>
+    <div className="space-y-4 pb-44">
+      <div className="sticky top-0 z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur border-b">
+        <div className="flex items-center gap-2">
+          <Link href={`/judge/divisions/${division.id}`}>
+            <Button variant="ghost" size="icon" className="size-11 shrink-0" aria-label="Back">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base font-bold truncate">{participant.member.full_name}</h1>
+            <p className="text-xs text-muted-foreground truncate">
+              {division.name}
+              {participant.play_order != null ? ` · #${participant.play_order}` : ''}
+            </p>
+          </div>
+          <Badge variant="outline" className="rounded-full shrink-0">
+            {scoringTypeLabels[scoringType]}
+          </Badge>
+          <JudgeRulesSheet
+            ruleset={ruleset}
+            scoringType={scoringType}
+            roundType={division.round_type}
+          />
+          {existingScore?.is_submitted && (
+            <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 rounded-full">
+              Submitted
+            </Badge>
+          )}
         </div>
-        {existingScore?.is_submitted && (
-          <Badge className="bg-green-100 text-green-700">Submitted</Badge>
+        {ruleset && (
+          <p className="mt-1 pl-11 text-[11px] text-muted-foreground truncate">
+            Rules: {ruleset.name}
+            {ruleset.version ? ` v${ruleset.version}` : ''}
+          </p>
         )}
       </div>
 
@@ -169,25 +245,27 @@ export default function ScoringForm({
           <div className="flex-1 min-w-0">
             <p className="font-bold text-lg">{participant.member.full_name}</p>
             {participant.member.nickname && (
-              <p className="text-muted-foreground">"{participant.member.nickname}"</p>
+              <p className="text-muted-foreground">&quot;{participant.member.nickname}&quot;</p>
             )}
             {participant.member.country && (
               <p className="text-sm text-muted-foreground">{participant.member.country}</p>
             )}
-            {existingScore?.updated_at && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Last updated: {new Date(existingScore.updated_at).toLocaleString()}
-              </p>
-            )}
           </div>
-          <Badge variant="outline">#{participant.play_order || '?'}</Badge>
+          <Badge variant="outline" className="rounded-full">#{participant.play_order || '?'}</Badge>
         </CardContent>
       </Card>
 
       {/* Technical Scores - large touch targets for eyes-free use */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base tracking-tight">Technical Execution</CardTitle>
+          <CardTitle className="text-base tracking-tight">
+            Technical Execution
+            {typeof ruleset?.scoring_config?.te_weight === 'number' && (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                ({String(ruleset.scoring_config.te_weight)}%)
+              </span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {scoreFields.slice(0, 4).map(field => (
@@ -208,7 +286,14 @@ export default function ScoringForm({
       {/* Performance Scores */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base tracking-tight">Performance</CardTitle>
+          <CardTitle className="text-base tracking-tight">
+            Performance
+            {typeof ruleset?.scoring_config?.fe_weight === 'number' && (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                ({String(ruleset.scoring_config.fe_weight)}%)
+              </span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {scoreFields.slice(4, 10).map(field => (
@@ -245,32 +330,29 @@ export default function ScoringForm({
         </CardContent>
       </Card>
 
-      {/* Totals - high contrast for dim stages (dark mode) */}
-      <Card className="bg-primary/10 dark:bg-primary/20 border-primary/30">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-3 gap-4 text-center">
+      {/* Totals + actions docked above bottom nav */}
+      <div className="fixed bottom-16 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur safe-area-bottom">
+        <div className="mx-auto max-w-lg bg-primary/10 border-b border-primary/20 px-4 py-3">
+          <div className="grid grid-cols-3 gap-3 text-center">
             <div>
-              <p className="text-xs text-muted-foreground">Technical</p>
-              <p className="text-xl font-bold font-mono tabular-nums">{totals.technical.toFixed(1)}</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Tech</p>
+              <p className="text-lg font-bold font-mono tabular-nums">{totals.technical.toFixed(1)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Performance</p>
-              <p className="text-xl font-bold font-mono tabular-nums">{totals.performance.toFixed(1)}</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Perf</p>
+              <p className="text-lg font-bold font-mono tabular-nums">{totals.performance.toFixed(1)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Total</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Total</p>
               <p className="text-2xl font-bold font-mono tabular-nums text-primary">{totals.total.toFixed(1)}</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Fixed Action Bar */}
-      <div className="fixed bottom-16 left-0 right-0 p-4 bg-background border-t z-40 safe-area-bottom">
+        </div>
+        <div className="p-3">
         <div className="flex gap-3 max-w-lg mx-auto">
           <Button
-            variant="outline"
-            className="flex-1 h-12 text-base"
+            variant="secondary"
+            className="flex-1 h-12 text-base rounded-full"
             onClick={() => saveScore(false)}
             disabled={saving || submitting}
           >
@@ -285,7 +367,7 @@ export default function ScoringForm({
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
-                className="flex-1 h-12 text-base"
+                className="flex-1 h-12 text-base rounded-full"
                 disabled={saving || submitting}
               >
                 {submitting ? (
@@ -346,6 +428,7 @@ export default function ScoringForm({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+        </div>
         </div>
       </div>
     </div>

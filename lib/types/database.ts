@@ -18,6 +18,9 @@ export interface Member {
   nickname: string | null
   role: MemberRole
   country: string | null
+  home_geo_id?: string | null
+  gender?: 'female' | 'male' | 'other' | 'undisclosed' | null
+  public_id?: string | null
   is_active: boolean
   created_at: string
   updated_at: string
@@ -31,6 +34,9 @@ export interface Event {
   event_date: string | null
   status: EventStatus
   ruleset_id: string | null
+  season_id?: string | null
+  tier_id?: string | null
+  geo_id?: string | null
   created_by: string | null
   created_at: string
   updated_at: string
@@ -50,6 +56,9 @@ export interface Division {
   scheduled_start: string | null
   scheduled_end: string | null
   venue: string | null
+  category_id?: string | null
+  eligibility?: 'open' | 'women' | 'youth' | 'masters' | null
+  field_scope?: 'championship' | 'invitational' | null
   created_at: string
   updated_at: string
 }
@@ -170,6 +179,9 @@ export interface EventFormData {
   event_date?: string
   status?: EventStatus
   ruleset_id?: string
+  season_id?: string | null
+  tier_id?: string | null
+  geo_id?: string | null
 }
 
 export interface DivisionFormData {
@@ -183,6 +195,7 @@ export interface DivisionFormData {
   scheduled_start?: string
   scheduled_end?: string
   venue?: string
+  category_id?: string | null
 }
 
 export interface ScoreFormData {

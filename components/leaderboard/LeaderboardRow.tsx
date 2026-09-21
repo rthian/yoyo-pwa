@@ -40,7 +40,7 @@ export default function LeaderboardRow({ entry, index }: LeaderboardRowProps) {
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.2, delay: index * 0.03 }}
       className={cn(
-        'flex items-center gap-4 p-3 rounded-xl border transition-colors',
+        'flex min-h-14 items-center gap-3 px-3 py-2.5 rounded-xl border transition-colors',
         entry.rank === 1 && 'bg-[var(--gold)]/10 dark:bg-[var(--gold)]/15 border-[var(--gold)]/30',
         entry.rank === 2 && 'bg-[var(--silver)]/10 dark:bg-[var(--silver)]/15 border-[var(--silver)]/30',
         entry.rank === 3 && 'bg-[var(--bronze)]/10 dark:bg-[var(--bronze)]/15 border-[var(--bronze)]/30',

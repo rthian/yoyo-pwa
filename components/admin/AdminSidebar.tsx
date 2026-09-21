@@ -5,8 +5,9 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 import {
   Calendar,
   Users,
@@ -15,11 +16,15 @@ import {
   Settings,
   Home,
   BookOpen,
+  Medal,
+  User,
+  LogOut,
 } from 'lucide-react'
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: Home },
   { href: '/admin/events', label: 'Events', icon: Calendar },
+  { href: '/admin/leagues', label: 'Custom Leagues', icon: Medal },
   { href: '/admin/members', label: 'Members', icon: Users },
   { href: '/admin/judges', label: 'Judges', icon: Trophy },
   { href: '/admin/rules', label: 'Rules', icon: BookOpen },
@@ -29,6 +34,14 @@ const navItems = [
 
 export default function AdminSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
 
   return (
     <aside className="hidden md:flex w-64 flex-col border-r bg-card min-h-[calc(100vh-64px)]">
@@ -55,6 +68,28 @@ export default function AdminSidebar() {
           )
         })}
       </nav>
+      <div className="p-4 border-t space-y-1">
+        <Link
+          href="/admin/profile"
+          className={cn(
+            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+            pathname.startsWith('/admin/profile')
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+          )}
+        >
+          <User className="h-5 w-5" />
+          My Profile
+        </Link>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-destructive hover:bg-accent"
+        >
+          <LogOut className="h-5 w-5" />
+          Sign out
+        </button>
+      </div>
     </aside>
   )
 }

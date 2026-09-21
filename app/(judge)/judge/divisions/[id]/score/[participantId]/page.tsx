@@ -34,12 +34,26 @@ export default async function ScoringPage({ params }: ScoringPageProps) {
     notFound()
   }
 
-  // Get division info
+  // Get division info + event ruleset for mid-routine rules
   const { data: division } = await supabaseAdmin
     .from('divisions')
     .select(`
       *,
-      event:events(id, name, status)
+      event:events(
+        id,
+        name,
+        status,
+        ruleset_id,
+        ruleset:rulesets(
+          id,
+          name,
+          code,
+          version,
+          source_url,
+          rules_content,
+          scoring_config
+        )
+      )
     `)
     .eq('id', divisionId)
     .single()

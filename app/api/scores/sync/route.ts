@@ -45,6 +45,38 @@ export async function POST(request: Request) {
 
     for (const offlineScore of scores) {
       try {
+        const { data: assignment } = await supabaseAdmin
+          .from('division_judges')
+          .select('id')
+          .eq('division_id', offlineScore.divisionId)
+          .eq('member_id', user.id)
+          .maybeSingle()
+        if (!assignment) {
+          results.failed.push(offlineScore.clientId)
+          continue
+        }
+
+        const { data: division } = await supabaseAdmin
+          .from('divisions')
+          .select('scoring_locked')
+          .eq('id', offlineScore.divisionId)
+          .maybeSingle()
+        if (!division || division.scoring_locked) {
+          results.failed.push(offlineScore.clientId)
+          continue
+        }
+
+        const { data: participant } = await supabaseAdmin
+          .from('division_members')
+          .select('id')
+          .eq('id', offlineScore.divisionMemberId)
+          .eq('division_id', offlineScore.divisionId)
+          .maybeSingle()
+        if (!participant) {
+          results.failed.push(offlineScore.clientId)
+          continue
+        }
+
         // Calculate totals
         const { scoreData } = offlineScore
         const technical = (scoreData.ex_clicks || 0) * 0.1 + 

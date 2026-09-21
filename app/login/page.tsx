@@ -66,7 +66,7 @@ function LoginForm() {
             <Input
               id="email"
               type="email"
-              placeholder="judge@example.com"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -103,12 +103,15 @@ function LoginForm() {
             )}
           </Button>
 
-          <div className="text-center">
+          <div className="text-center space-y-2">
             <a 
               href="/forgot-password" 
-              className="text-sm text-muted-foreground hover:text-primary"
+              className="block text-sm text-muted-foreground hover:text-primary"
             >
               Forgot your password?
+            </a>
+            <a href="/signup" className="block text-sm text-primary hover:underline">
+              Create a competitor account
             </a>
           </div>
         </form>

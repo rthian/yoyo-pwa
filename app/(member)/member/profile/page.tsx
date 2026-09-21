@@ -52,7 +52,7 @@ interface ParticipationEntry {
   } | null
 }
 
-export default function MemberProfilePage() {
+export default function MemberProfilePage({ embedded = false }: { embedded?: boolean } = {}) {
   const router = useRouter()
   const [member, setMember] = useState<Member | null>(null)
   const [history, setHistory] = useState<ParticipationEntry[]>([])
@@ -63,7 +63,20 @@ export default function MemberProfilePage() {
     full_name: '',
     nickname: '',
     country: '',
+    gender: 'undisclosed' as 'female' | 'male' | 'other' | 'undisclosed',
+    home_geo_id: '' as string,
   })
+  const [countries, setCountries] = useState<{ id: string; name: string; iso_alpha2: string | null }[]>([])
+
+  useEffect(() => {
+    fetch('/api/rankings/filters')
+      .then((r) => r.json())
+      .then((data) => {
+        const nodes = (data.geoNodes ?? []) as { id: string; name: string; level: string; iso_alpha2: string | null }[]
+        setCountries(nodes.filter((n) => n.level === 'country'))
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     async function fetchProfile() {
@@ -76,6 +89,8 @@ export default function MemberProfilePage() {
             full_name: data.member.full_name || '',
             nickname: data.member.nickname || '',
             country: data.member.country || '',
+            gender: data.member.gender || 'undisclosed',
+            home_geo_id: data.member.home_geo_id || '',
           })
         }
       } catch (error) {
@@ -112,7 +127,10 @@ export default function MemberProfilePage() {
       const response = await fetch('/api/member/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          home_geo_id: formData.home_geo_id || null,
+        }),
       })
 
       const result = await response.json()
@@ -187,7 +205,7 @@ export default function MemberProfilePage() {
     }, null)
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className={embedded ? 'max-w-4xl' : 'container mx-auto px-4 py-8 max-w-4xl'}>
       {/* Profile Header */}
       <div className="flex items-center gap-6 mb-8">
         <div className="rounded-full bg-primary h-20 w-20 flex items-center justify-center text-primary-foreground font-bold text-2xl flex-shrink-0">
@@ -205,6 +223,11 @@ export default function MemberProfilePage() {
               <span className="text-lg">{countryDisplay}</span>
             )}
             <Badge variant="secondary" className="capitalize">{member?.role}</Badge>
+            {member?.public_id && (
+              <a href={`/players/${member.public_id}`} className="text-sm text-primary hover:underline">
+                View public profile
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -383,6 +406,57 @@ export default function MemberProfilePage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="gender">Gender</Label>
+                  <select
+                    id="gender"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={formData.gender}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        gender: e.target.value as typeof formData.gender,
+                      })
+                    }
+                  >
+                    <option value="undisclosed">Prefer not to say</option>
+                    <option value="female">Female</option>
+                    <option value="male">Male</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    Female competitors appear on the Women rankings filter.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="home_geo">Home country (rankings)</Label>
+                  <select
+                    id="home_geo"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={formData.home_geo_id}
+                    onChange={(e) => {
+                      const id = e.target.value
+                      const c = countries.find((x) => x.id === id)
+                      setFormData({
+                        ...formData,
+                        home_geo_id: id,
+                        country: c?.name || formData.country,
+                      })
+                    }}
+                  >
+                    <option value="">Select country</option>
+                    {countries.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    Used for National Race and region filters.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <Label>Email</Label>
                   <Input
                     value={member?.email || ''}
@@ -411,7 +485,7 @@ export default function MemberProfilePage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => router.push('/')}
+                    onClick={() => router.push(embedded ? '/admin' : '/')}
                     disabled={saving}
                   >
                     Cancel
