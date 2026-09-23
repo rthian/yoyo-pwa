@@ -361,9 +361,13 @@ export default function ScoringForm({
               <CardTitle className="text-base tracking-tight">
                 Freestyle Evaluation (FE)
                 <span className="ml-2 text-xs font-normal text-muted-foreground">
-                  → /{feWeight}
+                  0–10 each → /{feWeight}
                 </span>
               </CardTitle>
+              <p className="text-xs text-muted-foreground font-normal pt-1">
+                {feKeys.length} categor{feKeys.length === 1 ? 'y' : 'ies'} for this round
+                {division.round_type ? ` (${String(division.round_type).replace(/_/g, ' ')})` : ''}.
+              </p>
             </CardHeader>
             <CardContent className="space-y-5">
               {feKeys.map((key) => {

@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/sheet'
 import { BookOpen, ExternalLink } from 'lucide-react'
 import type { Ruleset, ScoringType } from '@/lib/types/database'
+import { FE_LABELS } from '@/lib/judge/score-math'
 
 type JudgeRuleset = Pick<
   Ruleset,
@@ -106,37 +107,48 @@ export default function JudgeRulesSheet({
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">Technical weight</p>
-                  <p className="text-xl font-bold tabular-nums">{teWeight || '—'}%</p>
+                  <p className="text-xs text-muted-foreground">Technical (TE)</p>
+                  <p className="text-xl font-bold tabular-nums">/{teWeight || '—'}</p>
                   <p className="text-xs text-muted-foreground capitalize mt-1">
-                    {String(config.te_scoring || 'standard')}
+                    Live clicker · {String(config.te_scoring || 'positive/negative')}
                   </p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">Performance weight</p>
-                  <p className="text-xl font-bold tabular-nums">{feWeight || '—'}%</p>
+                  <p className="text-xs text-muted-foreground">Performance (FE)</p>
+                  <p className="text-xl font-bold tabular-nums">/{feWeight || '—'}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {feCategories.length} FE categories
+                    {feCategories.length || '—'} cats · each 0–10
                   </p>
                 </div>
               </div>
 
               {feCategories.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold mb-2">
-                    FE categories{isPrelim ? ' (prelim / semi)' : ' (final)'}
+                  <h3 className="text-sm font-semibold mb-1">
+                    FE sheet{isPrelim ? ' — prelim / semi' : ' — final'}
                   </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {feCategories.map((cat) => (
-                      <Badge key={cat} variant="secondary" className="capitalize">
-                        {cat.replace(/_/g, ' ')}
-                      </Badge>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Clicker fields map to the event sheet labels; use these categories as judging
-                    guidance.
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Score each category 0–10 (0.5 steps). Finals usually use 8 cats → /{feWeight || 40}.
+                    {isPrelim
+                      ? ' Prelim/semi may use a shorter list from this ruleset.'
+                      : ''}
                   </p>
+                  <ol className="space-y-1.5">
+                    {feCategories.map((cat, i) => (
+                      <li
+                        key={cat}
+                        className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
+                      >
+                        <span className="min-w-0">
+                          <span className="tabular-nums text-muted-foreground mr-2">{i + 1}.</span>
+                          {FE_LABELS[cat] || cat.replace(/_/g, ' ')}
+                        </span>
+                        <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                          0–10
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
                 </div>
               )}
 

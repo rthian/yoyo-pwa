@@ -115,7 +115,7 @@ export default async function PlayerPage({ params }: PageProps) {
               {profile.seasonRanks.map((r) => (
                 <Link
                   key={`${r.seasonSlug}-${r.categoryCode}`}
-                  href={`/rankings?season=${r.seasonSlug}&category=${r.categoryCode}`}
+                  href={`/rankings?season=${encodeURIComponent(r.seasonSlug)}&category=${encodeURIComponent(r.categoryCode)}&race=world&member=${encodeURIComponent(profile.publicId || publicId)}`}
                   className="rounded-xl border p-4 hover:bg-muted/40"
                 >
                   <p className="text-xs text-muted-foreground">
@@ -127,6 +127,7 @@ export default async function PlayerPage({ params }: PageProps) {
                   <p className="text-sm text-muted-foreground">
                     {r.totalPoints.toLocaleString()} pts world
                   </p>
+                  <p className="mt-2 text-xs font-medium text-primary">View my standing →</p>
                 </Link>
               ))}
             </div>

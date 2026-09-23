@@ -5,7 +5,7 @@
  */
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getCountryFlag } from '@/lib/utils/country-flags'
@@ -13,6 +13,7 @@ import { Info, Loader2, Search, X } from 'lucide-react'
 import type { CustomLeague, DivisionFilter, GeoNode, LeagueRankingEntry, PlayCategory, Season } from '@/lib/rankings/types'
 import RegionSheet from './RegionSheet'
 import SearchDialog from '@/components/shared/SearchDialog'
+import { cn } from '@/lib/utils'
 
 export default function RankingsClient() {
   const router = useRouter()
@@ -37,6 +38,9 @@ export default function RankingsClient() {
   const q = searchParams.get('q') || ''
   const leagueSlug = searchParams.get('league') || ''
   const race = (searchParams.get('race') || 'world') as 'world' | 'national'
+  /** Deep-link highlight from profile / dashboard (`member` = publicId or uuid). */
+  const focusMember = searchParams.get('member') || ''
+  const focusRowRef = useRef<HTMLLIElement | null>(null)
 
   const setFilter = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(searchParams.toString())
@@ -91,6 +95,8 @@ export default function RankingsClient() {
       division,
       season: effectiveSeason,
       geo: geoPath,
+      // Fetch fuller page when focusing a specific member (deep ranks)
+      limit: focusMember ? '200' : '50',
     })
     if (q) params.set('q', q)
 
@@ -121,7 +127,17 @@ export default function RankingsClient() {
     return () => ac.abort()
     // entries intentionally omitted — only used for soft-refresh UX
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seasonSlug, category, geoPath, division, q, leagueSlug, race])
+  }, [seasonSlug, category, geoPath, division, q, leagueSlug, race, focusMember])
+
+  useEffect(() => {
+    if (!focusMember || loading || entries.length === 0) return
+    const el = focusRowRef.current
+    if (!el) return
+    const t = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 80)
+    return () => window.clearTimeout(t)
+  }, [focusMember, loading, entries])
 
   const selectedGeo = useMemo(
     () => geoNodes.find((g) => g.path === geoPath),
@@ -312,8 +328,15 @@ export default function RankingsClient() {
         <ul className="divide-y rounded-xl border bg-card">
           {entries.map((e) => {
             const href = `/players/${e.publicId || e.memberId}`
+            const isFocus =
+              Boolean(focusMember) &&
+              (e.publicId === focusMember || e.memberId === focusMember)
             return (
-              <li key={e.memberId}>
+              <li
+                key={e.memberId}
+                ref={isFocus ? focusRowRef : undefined}
+                className={cn(isFocus && 'bg-primary/10 ring-2 ring-inset ring-primary/40')}
+              >
                 <Link
                   href={href}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50"
@@ -325,6 +348,11 @@ export default function RankingsClient() {
                     <p className="truncate font-medium">
                       {e.isoAlpha2 ? `${getCountryFlag(e.isoAlpha2)} ` : ''}
                       {e.nickname || e.memberName}
+                      {isFocus && (
+                        <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                          You
+                        </span>
+                      )}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
                       {e.geoName || e.country || '—'} · {e.eventsPlayed} event

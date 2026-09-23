@@ -10,11 +10,21 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loader2, Trophy } from 'lucide-react'
+import { Loader2, Trophy, AlertTriangle, CheckCircle2, PauseCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
 interface FinalizeEventPanelProps {
   eventId: string
+}
+
+type SoftCue = {
+  configured: boolean
+  cue: 'ready' | 'caution' | 'wait'
+  confidence: number
+  headline: string
+  reasons: string[]
+  integrityRisk: number
 }
 
 export default function FinalizeEventPanel({ eventId }: FinalizeEventPanelProps) {
@@ -24,6 +34,7 @@ export default function FinalizeEventPanel({ eventId }: FinalizeEventPanelProps)
   const [isFinalized, setIsFinalized] = useState(false)
   const [awardsCount, setAwardsCount] = useState(0)
   const [blockers, setBlockers] = useState<{ code: string; message: string }[]>([])
+  const [softCue, setSoftCue] = useState<SoftCue | null>(null)
 
   const refresh = async () => {
     setLoading(true)
@@ -35,6 +46,7 @@ export default function FinalizeEventPanel({ eventId }: FinalizeEventPanelProps)
       setIsFinalized(data.isFinalized)
       setAwardsCount(data.awardsCount ?? 0)
       setBlockers(data.blockers ?? [])
+      setSoftCue(data.softCue ?? null)
     } catch (e) {
       console.error(e)
     } finally {
@@ -48,6 +60,12 @@ export default function FinalizeEventPanel({ eventId }: FinalizeEventPanelProps)
   }, [eventId])
 
   const finalize = async () => {
+    if (softCue?.cue === 'caution' || softCue?.cue === 'wait') {
+      const ok = confirm(
+        `${softCue.headline}\n\n${softCue.reasons.slice(0, 4).join('\n')}\n\nFinalize anyway?`
+      )
+      if (!ok) return
+    }
     setActing(true)
     try {
       const res = await fetch(`/api/admin/events/${eventId}/finalize`, { method: 'POST' })
@@ -112,6 +130,39 @@ export default function FinalizeEventPanel({ eventId }: FinalizeEventPanelProps)
             ) : (
               <p className="text-sm text-muted-foreground">Ready to award season points.</p>
             )}
+
+            {!isFinalized && softCue && (
+              <div
+                className={cn(
+                  'rounded-lg border px-3 py-2 text-sm space-y-1',
+                  softCue.cue === 'wait'
+                    ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                    : softCue.cue === 'caution'
+                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-100'
+                      : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100'
+                )}
+              >
+                <p className="font-medium inline-flex items-start gap-1.5">
+                  {softCue.cue === 'wait' ? (
+                    <PauseCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  ) : softCue.cue === 'caution' ? (
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+                  )}
+                  {softCue.headline}
+                </p>
+                {softCue.reasons.slice(0, 3).map((r) => (
+                  <p key={r} className="text-xs opacity-90 pl-5">
+                    {r}
+                  </p>
+                ))}
+                {!softCue.configured && (
+                  <p className="text-[11px] opacity-60 pl-5">Deterministic cue (TypeSafe off)</p>
+                )}
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-2">
               {!isFinalized && (
                 <Button onClick={finalize} disabled={!canFinalize || acting}>

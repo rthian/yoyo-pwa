@@ -270,9 +270,17 @@ export default function MemberDashboardView({ member }: MemberDashboardViewProps
                       View Public Leaderboards
                     </Button>
                   </Link>
-                  <Link href="/rankings" className="block mt-2">
+                  {/* Deep-link: RankingsClient highlights ?member= (public_id or uuid) */}
+                  <Link
+                    href={
+                      member.public_id
+                        ? `/rankings?member=${encodeURIComponent(member.public_id)}`
+                        : '/rankings'
+                    }
+                    className="block mt-2"
+                  >
                     <Button variant="outline" className="w-full">
-                      View season rankings
+                      My season standing
                     </Button>
                   </Link>
                 </CardContent>
