@@ -11,6 +11,8 @@ const profileUpdateSchema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
   nickname: z.string().optional().nullable(),
   country: z.string().optional().nullable(),
+  gender: z.enum(['female', 'male', 'other', 'undisclosed']).optional().nullable(),
+  home_geo_id: z.string().uuid().optional().nullable(),
 })
 
 // Get current user's profile

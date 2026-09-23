@@ -9,17 +9,19 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  ArrowLeft,
-  User,
-  CheckCircle2,
-  Clock,
+import { 
+  ArrowLeft, 
+  User, 
+  CheckCircle2, 
+  Clock, 
   ChevronRight,
   Trophy,
-  Lock
+  Lock,
+  Gavel,
 } from 'lucide-react'
 import LockDivisionButton from '@/components/judge/LockDivisionButton'
 import DivisionPageTabs from '@/components/judge/DivisionPageTabs'
+import { nextInQueue, type ScoringQueueItem } from '@/lib/judge/scoring-queue'
 
 interface DivisionPageProps {
   params: Promise<{ id: string }>
@@ -29,9 +31,9 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
   const { id: divisionId } = await params
   const supabase = await createClient()
   const supabaseAdmin = createAdminClient()
-
+  
   const { data: { user } } = await supabase.auth.getUser()
-
+  
   if (!user) {
     redirect('/login')
   }
@@ -98,6 +100,27 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
   const scoringLocked = division.scoring_locked === true
   const isHeadJudgeOrAdmin = assignment.judge_type === 'head' || currentMember?.role === 'admin'
 
+  const queueItems: ScoringQueueItem[] = (participants ?? []).map((p, index) => {
+    const score = scoresMap[p.id]
+    let status: ScoringQueueItem['status'] = 'pending'
+    if (score?.is_submitted) status = 'submitted'
+    else if (score) status = 'draft'
+    return {
+      divisionId,
+      divisionName: division.name,
+      eventName: division.event?.name ?? '',
+      eventDate: division.event?.event_date ?? null,
+      divisionMemberId: p.id,
+      participantName: p.member?.full_name ?? 'Unknown',
+      nickname: p.member?.nickname ?? null,
+      playOrder: p.play_order ?? index + 1,
+      status,
+      totalScore: score?.total_score != null ? Number(score.total_score) : null,
+      scoringLocked,
+    }
+  })
+  const upNext = nextInQueue(queueItems)
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -120,95 +143,137 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
         />
       </div>
 
-      {/* Progress */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Progress</span>
-            <span className="text-sm text-muted-foreground">
-              {completedCount} / {totalParticipants}
-            </span>
-          </div>
-          <div className="h-2 bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary transition-all"
-              style={{
-                width: totalParticipants > 0
-                  ? `${(completedCount / totalParticipants) * 100}%`
-                  : '0%'
-              }}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Locked Banner */}
+      {scoringLocked && (
+        <Card className="border-amber-500/50 bg-amber-500/10">
+          <CardContent className="flex items-center gap-2 p-4">
+            <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <p className="font-medium text-amber-800 dark:text-amber-200">
+              Division locked — no new scores can be submitted or updated.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <DivisionPageTabs divisionId={divisionId} isHeadJudgeOrAdmin={isHeadJudgeOrAdmin}>
+        {/* Progress */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Progress</span>
+              <span className="text-sm text-muted-foreground">
+                {completedCount} / {totalParticipants}
+              </span>
+            </div>
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary transition-all"
+                style={{ 
+                  width: totalParticipants > 0 
+                    ? `${(completedCount / totalParticipants) * 100}%` 
+                    : '0%' 
+                }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Up next by play_order */}
+        {upNext && !scoringLocked && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="p-4 space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Up next · play order
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold tabular-nums shrink-0">
+                  {upNext.playOrder ?? '—'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold truncate">{upNext.participantName}</p>
+                  {upNext.status === 'draft' && (
+                    <Badge variant="outline" className="text-yellow-600 mt-1">
+                      Draft in progress
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <Button asChild className="w-full h-12 rounded-full">
+                <Link
+                  href={`/judge/divisions/${divisionId}/score/${upNext.divisionMemberId}`}
+                >
+                  <Gavel className="h-5 w-5 mr-2" />
+                  Score now
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Participants List */}
         <div className="space-y-2">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Trophy className="h-5 w-5" />
             Participants
-            {scoringLocked && (
-              <Badge variant="secondary" className="ml-auto flex items-center gap-1">
-                <Lock className="h-3 w-3" />
-                Locked
-              </Badge>
-            )}
           </h2>
-
+          
           {participants && participants.length > 0 ? (
             <div className="space-y-2">
               {participants.map((participant, index) => {
                 const score = scoresMap[participant.id]
                 const isScored = score?.is_submitted
+                const isUpNext = upNext?.divisionMemberId === participant.id
 
                 const cardContent = (
-                  <Card className={`hover:bg-accent transition-colors active:scale-[0.98] ${isScored ? 'border-green-500/50' : ''} ${scoringLocked ? 'opacity-75' : ''}`}>
-                    <CardContent className="flex items-center gap-4 p-4">
-                      {/* Order number */}
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                        <span className="text-sm font-bold">
-                          {participant.play_order || index + 1}
-                        </span>
-                      </div>
-
-                      {/* Participant info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold truncate">
-                          {participant.member?.full_name}
-                        </p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          {participant.member?.nickname && (
-                            <span>&ldquo;{participant.member.nickname}&rdquo;</span>
-                          )}
-                          {participant.member?.country && (
-                            <span>• {participant.member.country}</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Score status */}
-                      {isScored ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                            {score.total_score?.toFixed(1)}
+                    <Card className={`transition-colors ${!scoringLocked && 'hover:bg-accent active:scale-[0.98]'} ${scoringLocked && 'opacity-75'} ${isScored ? 'border-green-500/50' : ''} ${isUpNext && !isScored ? 'border-primary ring-1 ring-primary/40' : ''}`}>
+                      <CardContent className="flex items-center gap-4 p-4">
+                        {/* Order number */}
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isUpNext && !isScored ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                          <span className="text-sm font-bold">
+                            {participant.play_order || index + 1}
                           </span>
-                          <CheckCircle2 className="h-5 w-5 text-green-500" />
                         </div>
-                      ) : score ? (
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-yellow-600">
-                            <Clock className="h-3 w-3 mr-1" />
-                            Draft
-                          </Badge>
-                        </div>
-                      ) : (
-                        <Badge variant="secondary">Score</Badge>
-                      )}
 
-                      <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                    </CardContent>
-                  </Card>
+                        {/* Participant info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold truncate">
+                            {participant.member?.full_name}
+                          </p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            {isUpNext && !isScored && (
+                              <span className="text-primary font-medium">Up next</span>
+                            )}
+                            {participant.member?.nickname && (
+                              <span>"{participant.member.nickname}"</span>
+                            )}
+                            {participant.member?.country && (
+                              <span>• {participant.member.country}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Score status */}
+                        {isScored ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                              {score.total_score?.toFixed(1)}
+                            </span>
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          </div>
+                        ) : score ? (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-yellow-600">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Draft
+                            </Badge>
+                          </div>
+                        ) : (
+                          <Badge variant="secondary">Score</Badge>
+                        )}
+
+                        <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                      </CardContent>
+                    </Card>
                 )
 
                 return scoringLocked ? (
@@ -232,7 +297,6 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
             </Card>
           )}
         </div>
-      </DivisionPageTabs>
-    </div>
+      </DivisionPageTabs>    </div>
   )
 }

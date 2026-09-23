@@ -33,7 +33,6 @@ export async function GET() {
           description,
           scoring_type,
           round_type,
-          max_participants,
           scheduled_start,
           scheduled_end,
           venue,
@@ -83,7 +82,6 @@ export async function GET() {
         description: string | null
         scoring_type: string
         round_type: string | null
-        max_participants: number | null
         scheduled_start: string | null
         scheduled_end: string | null
         venue: string | null

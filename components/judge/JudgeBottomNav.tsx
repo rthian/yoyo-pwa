@@ -32,9 +32,9 @@ export default function JudgeBottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors min-w-16',
+                'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-colors min-w-16 min-h-14',
                 isActive
-                  ? 'text-primary'
+                  ? 'text-primary bg-primary/10'
                   : 'text-muted-foreground'
               )}
             >

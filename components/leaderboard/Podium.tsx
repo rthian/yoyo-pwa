@@ -51,16 +51,17 @@ export default function Podium({ entries, className }: PodiumProps) {
           >
             <div
               className={cn(
-                'w-full rounded-xl border p-4 text-center min-h-[100px] flex flex-col justify-center',
+                'w-full rounded-2xl border p-3 text-center flex flex-col justify-center',
+                rank === 1 ? 'min-h-[132px]' : 'min-h-[108px]',
                 rankClass
               )}
             >
-              <Icon className="h-8 w-8 mx-auto mb-1" />
+              <Icon className={cn('mx-auto mb-1', rank === 1 ? 'h-9 w-9' : 'h-7 w-7')} />
               <p className="text-xs font-medium opacity-90">{label}</p>
-              <p className="font-bold truncate mt-1" title={entry.memberName}>
+              <p className="font-bold truncate mt-1 text-sm" title={entry.memberName}>
                 {entry.memberName}
               </p>
-              <p className="text-lg font-bold font-mono tabular-nums mt-1">
+              <p className={cn('font-bold font-mono tabular-nums mt-1', rank === 1 ? 'text-xl' : 'text-lg')}>
                 {entry.totalScore.toFixed(2)}
               </p>
               <p className="text-xs opacity-75 mt-0.5">

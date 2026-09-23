@@ -20,6 +20,7 @@ import DivisionsList from '@/components/admin/DivisionsList'
 import EventStatusActions from '@/components/admin/EventStatusActions'
 import DeleteEventButton from '@/components/admin/DeleteEventButton'
 import ScheduleManager from '@/components/admin/ScheduleManager'
+import FinalizeEventPanel from '@/components/admin/FinalizeEventPanel'
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
@@ -130,6 +131,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </CardContent>
         </Card>
       )}
+
+      {/* League points finalization */}
+      <FinalizeEventPanel eventId={id} />
 
       {/* Divisions & Schedule Tabs */}
       <Tabs defaultValue="divisions">

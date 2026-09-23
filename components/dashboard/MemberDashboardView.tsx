@@ -209,7 +209,7 @@ export default function MemberDashboardView({ member }: MemberDashboardViewProps
                     {events.map((event) => (
                       <Link
                         key={event.id}
-                        href={`/events/${event.id}/schedule`}
+                        href={`/events/${event.id}`}
                         className="flex items-center justify-between p-3 rounded-lg hover:bg-accent transition-colors"
                       >
                         <div>
@@ -268,6 +268,19 @@ export default function MemberDashboardView({ member }: MemberDashboardViewProps
                     <Button variant="outline" className="w-full">
                       <Trophy className="h-4 w-4 mr-2" />
                       View Public Leaderboards
+                    </Button>
+                  </Link>
+                  {/* Deep-link: RankingsClient highlights ?member= (public_id or uuid) */}
+                  <Link
+                    href={
+                      member.public_id
+                        ? `/rankings?member=${encodeURIComponent(member.public_id)}`
+                        : '/rankings'
+                    }
+                    className="block mt-2"
+                  >
+                    <Button variant="outline" className="w-full">
+                      My season standing
                     </Button>
                   </Link>
                 </CardContent>

@@ -21,7 +21,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const token = searchParams.get('token')
 
     if (token) {
-      // Verify token
+      // Verify token — callers: /leaderboard/[divisionId]?token= from leaderboards hub
       const { data: tokenData } = await supabaseAdmin
         .from('leaderboard_tokens')
         .select('*')
@@ -37,21 +37,28 @@ export async function GET(request: Request, { params }: RouteParams) {
         )
       }
 
-      // Update view count
       await supabaseAdmin
         .from('leaderboard_tokens')
         .update({ views_count: (tokenData.views_count || 0) + 1 })
         .eq('id', tokenData.id)
     } else {
-      // Check authentication
-      const supabase = await createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
+      // Public when scoring is locked (profile → contest results links).
+      // Otherwise require auth. User: "events should be clickable and link back to the result pages"
+      const { data: accessDiv } = await supabaseAdmin
+        .from('divisions')
+        .select('scoring_locked')
+        .eq('id', divisionId)
+        .maybeSingle()
+
+      if (!accessDiv?.scoring_locked) {
+        const supabase = await createClient()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
       }
     }
 

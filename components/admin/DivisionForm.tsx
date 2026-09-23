@@ -4,7 +4,7 @@
  */
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -23,6 +23,7 @@ import {
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Division } from '@/lib/types/database'
+import type { PlayCategory } from '@/lib/rankings/types'
 
 interface DivisionFormProps {
   eventId: string
@@ -32,6 +33,16 @@ interface DivisionFormProps {
 export default function DivisionForm({ eventId, division }: DivisionFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [categories, setCategories] = useState<PlayCategory[]>([])
+
+  useEffect(() => {
+    fetch('/api/rankings/filters')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.categories) setCategories(data.categories)
+      })
+      .catch(() => {})
+  }, [])
 
   const {
     register,
@@ -53,6 +64,13 @@ export default function DivisionForm({ eventId, division }: DivisionFormProps) {
       scheduled_start: division?.scheduled_start ? new Date(division.scheduled_start).toISOString().slice(0, 16) : '',
       scheduled_end: division?.scheduled_end ? new Date(division.scheduled_end).toISOString().slice(0, 16) : '',
       venue: division?.venue || '',
+      category_id: division?.category_id || null,
+      eligibility:
+        ((division as { eligibility?: 'open' | 'women' | 'youth' | 'masters' })
+          ?.eligibility as 'open' | 'women' | 'youth' | 'masters' | undefined) || 'open',
+      field_scope:
+        ((division as { field_scope?: 'championship' | 'invitational' })
+          ?.field_scope as 'championship' | 'invitational' | undefined) || 'championship',
     },
   })
 
@@ -60,6 +78,9 @@ export default function DivisionForm({ eventId, division }: DivisionFormProps) {
   const isActive = watch('is_active')
   const hideScoresUntilComplete = watch('hide_scores_until_complete')
   const roundType = watch('round_type')
+  const categoryId = watch('category_id')
+  const eligibility = watch('eligibility')
+  const fieldScope = watch('field_scope')
 
   const onSubmit = async (data: DivisionFormData) => {
     setLoading(true)
@@ -120,6 +141,75 @@ export default function DivisionForm({ eventId, division }: DivisionFormProps) {
         {errors.name && (
           <p className="text-sm text-destructive">{errors.name.message}</p>
         )}
+      </div>
+
+      <div className="space-y-2">
+        <Label>Play category (for league points)</Label>
+        <Select
+          value={categoryId || 'none'}
+          onValueChange={(v) => setValue('category_id', v === 'none' ? null : v)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="1A–5A / AP" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">None (no season points)</SelectItem>
+            {categories.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.code} — {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Field eligibility</Label>
+        <Select
+          value={eligibility || 'open'}
+          onValueChange={(v) =>
+            setValue(
+              'eligibility',
+              v as 'open' | 'women' | 'youth' | 'masters'
+            )
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="open">Open</SelectItem>
+            <SelectItem value="women">Women</SelectItem>
+            <SelectItem value="youth">Youth</SelectItem>
+            <SelectItem value="masters">Masters</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Field scope</Label>
+        <Select
+          value={fieldScope || 'championship'}
+          onValueChange={(v) =>
+            setValue('field_scope', v as 'championship' | 'invitational')
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="championship">
+              Championship (National Race + titles)
+            </SelectItem>
+            <SelectItem value="invitational">
+              Invitational / International Open (World Race only)
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Use Invitational for International Open divisions at a National. They earn World
+          Race points but do not count toward National Race.
+        </p>
       </div>
 
       <div className="space-y-2">

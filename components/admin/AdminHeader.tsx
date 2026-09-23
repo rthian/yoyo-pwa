@@ -16,8 +16,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Menu, User, LogOut } from 'lucide-react'
+import { Menu, User, LogOut, ExternalLink } from 'lucide-react'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { formatCountryWithFlag } from '@/lib/utils/country-flags'
 import type { Member } from '@/lib/types/database'
 
 interface AdminHeaderProps {
@@ -65,6 +66,16 @@ export default function AdminHeader({ member }: AdminHeaderProps) {
               <Link href="/admin/settings" className="px-3 py-2 rounded-lg hover:bg-accent">
                 Settings
               </Link>
+              <Link href="/admin/profile" className="px-3 py-2 rounded-lg hover:bg-accent">
+                My Profile
+              </Link>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="px-3 py-2 rounded-lg hover:bg-accent text-left text-destructive"
+              >
+                Sign out
+              </button>
             </nav>
           </SheetContent>
         </Sheet>
@@ -81,20 +92,44 @@ export default function AdminHeader({ member }: AdminHeaderProps) {
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              <span className="hidden sm:inline">{member.full_name}</span>
+            <Button
+              variant="ghost"
+              className="relative h-9 w-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground font-semibold text-sm"
+              aria-label="Account menu"
+            >
+              {member.full_name
+                .split(' ')
+                .map((part) => part.charAt(0))
+                .join('')
+                .toUpperCase()
+                .slice(0, 2)}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>
-              <div className="flex flex-col">
-                <span>{member.full_name}</span>
-                <span className="text-xs text-muted-foreground">{member.email}</span>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <span className="text-sm font-medium leading-none">{member.full_name}</span>
+                <span className="text-xs leading-none text-muted-foreground">{member.email}</span>
+                {formatCountryWithFlag(member.country) && (
+                  <span className="text-xs leading-none text-muted-foreground">
+                    {formatCountryWithFlag(member.country)}
+                  </span>
+                )}
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut}>
+            <DropdownMenuItem onClick={() => router.push('/admin/profile')}>
+              <User className="h-4 w-4 mr-2" />
+              My Profile
+            </DropdownMenuItem>
+            {member.public_id && (
+              <DropdownMenuItem onClick={() => router.push(`/players/${member.public_id}`)}>
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Public profile
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
               <LogOut className="h-4 w-4 mr-2" />
               Sign out
             </DropdownMenuItem>

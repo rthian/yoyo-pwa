@@ -56,6 +56,17 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       }
     }
 
+    if (scoringLocked) {
+      const { getPanelLockBlockers } = await import('@/lib/rankings/standings')
+      const blockers = await getPanelLockBlockers(supabaseAdmin, divisionId)
+      if (blockers.missing > 0) {
+        return NextResponse.json(
+          { error: blockers.message, missing: blockers.missing },
+          { status: 409 }
+        )
+      }
+    }
+
     const { data: division, error } = await supabaseAdmin
       .from('divisions')
       .update({ scoring_locked: scoringLocked })
@@ -65,6 +76,30 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // Freeze standings for league points when locked (004_league_rankings)
+    try {
+      const { snapshotDivisionResults, clearAutoDivisionResults } = await import(
+        '@/lib/rankings/standings'
+      )
+      if (scoringLocked) {
+        await snapshotDivisionResults(supabaseAdmin, divisionId)
+      } else {
+        await clearAutoDivisionResults(supabaseAdmin, divisionId)
+      }
+    } catch (snapErr) {
+      console.error('Division results snapshot failed:', snapErr)
+      return NextResponse.json(
+        {
+          error:
+            snapErr instanceof Error
+              ? `Locked, but failed to freeze standings: ${snapErr.message}`
+              : 'Locked, but failed to freeze standings for league points',
+          division,
+        },
+        { status: 502 }
+      )
     }
 
     return NextResponse.json({ division })

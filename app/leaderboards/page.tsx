@@ -32,6 +32,9 @@ export default function LeaderboardsHubPage() {
   const [events, setEvents] = useState<EventWithDivisions[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [myBoards, setMyBoards] = useState<
+    { divisionId: string; divisionName: string; eventName: string; scoringLocked: boolean }[]
+  >([])
 
   useEffect(() => {
     async function fetchLeaderboards() {
@@ -49,6 +52,10 @@ export default function LeaderboardsHubPage() {
       }
     }
     fetchLeaderboards()
+    fetch('/api/member/boards')
+      .then((r) => (r.ok ? r.json() : { boards: [] }))
+      .then((data) => setMyBoards(data.boards ?? []))
+      .catch(() => setMyBoards([]))
   }, [])
 
   const getStatusBadgeVariant = (status: string) => {
@@ -101,6 +108,29 @@ export default function LeaderboardsHubPage() {
             Follow live scores and rankings from active yo-yo competitions
           </p>
         </div>
+
+        {myBoards.length > 0 && (
+          <div className="max-w-2xl mx-auto mb-8 space-y-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              My divisions
+            </h2>
+            {myBoards.map((b) => (
+              <Link key={b.divisionId} href={`/leaderboard/${b.divisionId}`}>
+                <Card className="hover:bg-accent/40 transition-colors">
+                  <CardContent className="flex items-center justify-between py-3">
+                    <div>
+                      <p className="font-medium">{b.divisionName}</p>
+                      <p className="text-sm text-muted-foreground">{b.eventName}</p>
+                    </div>
+                    <Badge variant={b.scoringLocked ? 'secondary' : 'outline'}>
+                      {b.scoringLocked ? 'Final' : 'Live'}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
 
         {error && (
           <Card className="max-w-md mx-auto text-center mb-8">

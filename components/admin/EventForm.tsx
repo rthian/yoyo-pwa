@@ -22,6 +22,7 @@ import {
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Event, Ruleset } from '@/lib/types/database'
+import type { EventTier, GeoNode, Season } from '@/lib/rankings/types'
 
 interface EventFormProps {
   event?: Event
@@ -31,20 +32,32 @@ export default function EventForm({ event }: EventFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [rulesets, setRulesets] = useState<Ruleset[]>([])
+  const [seasons, setSeasons] = useState<Season[]>([])
+  const [tiers, setTiers] = useState<EventTier[]>([])
+  const [countries, setCountries] = useState<GeoNode[]>([])
 
   useEffect(() => {
-    async function fetchRulesets() {
+    async function fetchMeta() {
       try {
-        const response = await fetch('/api/rulesets')
-        const data = await response.json()
-        if (data.rulesets) {
-          setRulesets(data.rulesets)
+        const [rulesRes, filtersRes] = await Promise.all([
+          fetch('/api/rulesets'),
+          fetch('/api/rankings/filters'),
+        ])
+        const rulesData = await rulesRes.json()
+        if (rulesData.rulesets) setRulesets(rulesData.rulesets)
+        const filters = await filtersRes.json()
+        if (filters.seasons) setSeasons(filters.seasons)
+        if (filters.tiers) setTiers(filters.tiers)
+        if (filters.geoNodes) {
+          setCountries(
+            (filters.geoNodes as GeoNode[]).filter((g) => g.level === 'country')
+          )
         }
       } catch (error) {
-        console.error('Error fetching rulesets:', error)
+        console.error('Error fetching event form meta:', error)
       }
     }
-    fetchRulesets()
+    fetchMeta()
   }, [])
 
   const {
@@ -62,11 +75,17 @@ export default function EventForm({ event }: EventFormProps) {
       event_date: event?.event_date || '',
       status: event?.status || 'draft',
       ruleset_id: event?.ruleset_id || undefined,
+      season_id: event?.season_id || null,
+      tier_id: event?.tier_id || null,
+      geo_id: event?.geo_id || null,
     },
   })
 
   const status = watch('status')
   const rulesetId = watch('ruleset_id')
+  const seasonId = watch('season_id')
+  const tierId = watch('tier_id')
+  const geoId = watch('geo_id')
 
   const onSubmit = async (data: EventFormData) => {
     setLoading(true)
@@ -215,6 +234,75 @@ export default function EventForm({ event }: EventFormProps) {
           {errors.ruleset_id && (
             <p className="text-sm text-destructive">{errors.ruleset_id.message}</p>
           )}
+        </div>
+      </div>
+
+      <div className="space-y-4 rounded-lg border p-4">
+        <h3 className="text-sm font-medium">League rankings</h3>
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label>Season</Label>
+            <Select
+              value={seasonId || 'none'}
+              onValueChange={(v) => setValue('season_id', v === 'none' ? null : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Season" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {seasons.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Event tier</Label>
+            <Select
+              value={tierId || 'none'}
+              onValueChange={(v) => setValue('tier_id', v === 'none' ? null : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Tier" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {tiers.map((t) => {
+                  const races: string[] = []
+                  if (t.counts_for_national_race) races.push('National Race')
+                  if (t.counts_for_world_race) races.push('World Race')
+                  if (!races.length) races.push('Custom League only')
+                  return (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name} (×{t.multiplier} · {races.join(' + ')})
+                    </SelectItem>
+                  )
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Host country</Label>
+            <Select
+              value={geoId || 'none'}
+              onValueChange={(v) => setValue('geo_id', v === 'none' ? null : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Country" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {countries.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 

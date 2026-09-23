@@ -8,7 +8,7 @@
 
 import { use, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useSearchParams } from 'next/navigation'
 import { Loader2, Trophy, RefreshCw, Radio } from 'lucide-react'
@@ -91,42 +91,53 @@ export default function PublicLeaderboardPage({ params }: PageProps) {
   const unscored = leaderboard.filter((e) => e.scoreCount === 0)
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-2xl mx-auto space-y-4">
-        {/* Header */}
-        <div className="text-center py-4">
-          <p className="text-sm text-muted-foreground mb-1 tracking-tight">
+    <div className="min-h-screen bg-background pb-8 safe-area-bottom">
+      <div className="mx-auto max-w-lg">
+        <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur px-4 pt-3 pb-3 safe-area-top">
+          <p className="text-xs text-muted-foreground tracking-tight truncate">
             {division.event.name}
           </p>
-          <h1 className="text-2xl font-bold tracking-tight">{division.name}</h1>
-          <div className="flex items-center justify-center gap-2 mt-2">
-            <Badge variant={division.event.status === 'active' ? 'default' : 'secondary'}>
+          <div className="mt-0.5 flex items-start justify-between gap-3">
+            <h1 className="text-xl font-bold tracking-tight leading-tight">{division.name}</h1>
+            <Badge
+              variant={division.event.status === 'active' ? 'default' : 'secondary'}
+              className="shrink-0 rounded-full"
+            >
               {division.event.status}
             </Badge>
           </div>
-        </div>
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary">
+              <Radio className="h-3.5 w-3.5 animate-pulse" />
+              <span>Live</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                {new Date(lastUpdated).toLocaleTimeString()}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-11"
+                onClick={refresh}
+                aria-label="Refresh leaderboard"
+              >
+                <RefreshCw className="h-5 w-5" />
+              </Button>
+              <label className="flex min-h-11 items-center gap-2 px-2 text-xs text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                  className="size-4 rounded"
+                />
+                Auto
+              </label>
+            </div>
+          </div>
+        </header>
 
-        {/* Refresh Controls */}
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Radio className="h-3 w-3 text-green-500 animate-pulse" />
-            <span>Live • Updated: {new Date(lastUpdated).toLocaleTimeString()}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={refresh}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <label className="flex items-center gap-1 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="rounded"
-              />
-              Auto-refresh
-            </label>
-          </div>
-        </div>
+        <div className="space-y-4 px-4 pt-4">
 
         {/* Podium - Top 3 */}
         {top3.length > 0 && (
@@ -135,25 +146,20 @@ export default function PublicLeaderboardPage({ params }: PageProps) {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <Podium entries={top3} className="mb-4" />
+            <Podium entries={top3} className="mb-2" />
           </motion.div>
         )}
 
-        {/* Leaderboard - Rest of ranked */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 tracking-tight">
-              <Trophy className="h-5 w-5" />
-              Leaderboard
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <section className="rounded-2xl border bg-card overflow-hidden">
+          <div className="flex items-center gap-2 border-b px-4 py-3">
+            <Trophy className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold tracking-tight">Leaderboard</h2>
+          </div>
+          <div className="p-2">
             {scored.length === 0 ? (
-              <p className="text-center py-8 text-muted-foreground">
-                No scores yet
-              </p>
+              <p className="text-center py-10 text-muted-foreground">No scores yet</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <AnimatePresence mode="popLayout">
                   {rest.map((entry, index) => (
                     <LeaderboardRow
@@ -164,37 +170,49 @@ export default function PublicLeaderboardPage({ params }: PageProps) {
                   ))}
                 </AnimatePresence>
 
-                {/* Unscored participants */}
                 {unscored.length > 0 && (
-                  <div className="pt-4 border-t border-border mt-4">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Awaiting Scores
+                  <div className="pt-3 mt-2 border-t border-border px-1">
+                    <p className="text-xs font-medium text-muted-foreground mb-2 px-2 uppercase tracking-wide">
+                      Awaiting scores
                     </p>
                     {unscored.map((entry) => (
                       <div
                         key={entry.memberId}
-                        className="flex items-center gap-4 p-2 opacity-60"
+                        className="flex min-h-14 items-center gap-3 px-2 py-2 opacity-70"
                       >
-                        <div className="w-8 text-center text-muted-foreground font-mono tabular-nums">
+                        <div className="w-8 text-center text-muted-foreground font-mono tabular-nums text-sm">
                           #{entry.playOrder}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="truncate">{entry.memberName}</p>
+                          <p className="truncate font-medium">{entry.memberName}</p>
                         </div>
-                        <Badge variant="outline">Pending</Badge>
+                        <Badge variant="outline" className="rounded-full">
+                          Pending
+                        </Badge>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        {/* Footer */}
-        <div className="text-center text-sm text-muted-foreground py-4">
+        <div className="text-center text-xs text-muted-foreground py-4">
           <p>YoYo League</p>
-          <p className="text-xs mt-1">© {new Date().getFullYear()} YoYo League. Created by <a href="https://github.com/rthian" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">rthian</a>.</p>
+          <p className="mt-1">
+            © {new Date().getFullYear()} YoYo League. Created by{' '}
+            <a
+              href="https://github.com/rthian"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              rthian
+            </a>
+            .
+          </p>
+        </div>
         </div>
       </div>
     </div>

@@ -1,11 +1,13 @@
 /**
  * Password Reset Page
- * Allows users to set a new password after receiving reset email
+ * Sets a new password after Supabase recovery session is established
+ * (via /auth/callback exchanging the email link code)
  */
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,15 +15,61 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, CheckCircle } from 'lucide-react'
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
-  
-  const supabase = createClient()
+  const [ready, setReady] = useState(false)
+  const [sessionMissing, setSessionMissing] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient()
+    let cancelled = false
+
+    async function establishSession() {
+      // Legacy / direct links sometimes land here with ?code=
+      const code = searchParams.get('code')
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+        if (cancelled) return
+        if (exchangeError) {
+          setError(exchangeError.message)
+          setSessionMissing(true)
+          setReady(true)
+          return
+        }
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (cancelled) return
+
+      if (!session) {
+        setSessionMissing(true)
+        setError('This reset link is invalid or has expired. Please request a new one.')
+      }
+
+      setReady(true)
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        setSessionMissing(false)
+        setError(null)
+        setReady(true)
+      }
+    })
+
+    void establishSession()
+
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,6 +88,14 @@ export default function ResetPasswordPage() {
     setLoading(true)
 
     try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setError('Auth session missing! Request a new reset link and open it in this browser.')
+        setSessionMissing(true)
+        return
+      }
+
       const { error: updateError } = await supabase.auth.updateUser({
         password,
       })
@@ -60,6 +116,17 @@ export default function ResetPasswordPage() {
     }
   }
 
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Verifying reset link...
+        </div>
+      </div>
+    )
+  }
+
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -73,6 +140,26 @@ export default function ResetPasswordPage() {
               Your password has been successfully updated. Redirecting to login...
             </CardDescription>
           </CardHeader>
+        </Card>
+      </div>
+    )
+  }
+
+  if (sessionMissing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Link expired</CardTitle>
+            <CardDescription>
+              {error || 'Your password reset session is missing. Request a new link and open it in this same browser.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full">
+              <Link href="/forgot-password">Request new reset link</Link>
+            </Button>
+          </CardContent>
         </Card>
       </div>
     )
@@ -102,7 +189,7 @@ export default function ResetPasswordPage() {
                 autoComplete="new-password"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
               <Input
@@ -136,5 +223,19 @@ export default function ResetPasswordPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background p-4">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <ResetPasswordForm />
+    </Suspense>
   )
 }
