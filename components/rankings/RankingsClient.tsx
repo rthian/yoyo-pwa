@@ -23,6 +23,7 @@ export default function RankingsClient() {
   const [categories, setCategories] = useState<PlayCategory[]>([])
   const [geoNodes, setGeoNodes] = useState<GeoNode[]>([])
   const [entries, setEntries] = useState<LeagueRankingEntry[]>([])
+  const [focusEntry, setFocusEntry] = useState<LeagueRankingEntry | null>(null)
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -95,10 +96,10 @@ export default function RankingsClient() {
       division,
       season: effectiveSeason,
       geo: geoPath,
-      // Fetch fuller page when focusing a specific member (deep ranks)
-      limit: focusMember ? '200' : '50',
+      limit: '50',
     })
     if (q) params.set('q', q)
+    if (focusMember) params.set('member', focusMember)
 
     if (!leagueSlug) {
       params.set('race', race === 'national' ? 'national' : 'world')
@@ -113,6 +114,7 @@ export default function RankingsClient() {
         const data = await r.json()
         if (!r.ok) throw new Error(data.error || 'Failed to load rankings')
         setEntries(data.entries ?? [])
+        setFocusEntry(data.focusEntry ?? null)
         setTotal(data.total ?? 0)
         setError(null)
       })
@@ -130,14 +132,26 @@ export default function RankingsClient() {
   }, [seasonSlug, category, geoPath, division, q, leagueSlug, race, focusMember])
 
   useEffect(() => {
-    if (!focusMember || loading || entries.length === 0) return
+    if (!focusMember || loading) return
     const el = focusRowRef.current
     if (!el) return
     const t = window.setTimeout(() => {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }, 80)
     return () => window.clearTimeout(t)
-  }, [focusMember, loading, entries])
+  }, [focusMember, loading, entries, focusEntry])
+
+  const focusInBoard = useMemo(() => {
+    if (!focusMember || !focusEntry) return false
+    return entries.some(
+      (e) => e.memberId === focusEntry.memberId || e.publicId === focusEntry.publicId
+    )
+  }, [focusMember, focusEntry, entries])
+
+  const displayEntries = useMemo(() => {
+    if (!focusEntry || focusInBoard) return entries
+    return [...entries, focusEntry]
+  }, [entries, focusEntry, focusInBoard])
 
   const selectedGeo = useMemo(
     () => geoNodes.find((g) => g.path === geoPath),
@@ -320,23 +334,36 @@ export default function RankingsClient() {
         <div className="flex justify-center py-16 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
-      ) : entries.length === 0 ? (
+      ) : entries.length === 0 && !focusEntry ? (
         <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
           No ranking points for this filter yet.
         </div>
       ) : (
         <ul className="divide-y rounded-xl border bg-card">
-          {entries.map((e) => {
+          {displayEntries.map((e, idx) => {
             const href = `/players/${e.publicId || e.memberId}`
             const isFocus =
               Boolean(focusMember) &&
               (e.publicId === focusMember || e.memberId === focusMember)
+            const isDeepPinned =
+              Boolean(focusEntry) &&
+              !focusInBoard &&
+              e.memberId === focusEntry!.memberId &&
+              idx === displayEntries.length - 1
             return (
               <li
-                key={e.memberId}
+                key={isDeepPinned ? `focus-${e.memberId}` : e.memberId}
                 ref={isFocus ? focusRowRef : undefined}
-                className={cn(isFocus && 'bg-primary/10 ring-2 ring-inset ring-primary/40')}
+                className={cn(
+                  isFocus && 'bg-primary/10 ring-2 ring-inset ring-primary/40',
+                  isDeepPinned && 'border-t-4 border-t-muted'
+                )}
               >
+                {isDeepPinned && (
+                  <p className="px-4 pt-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Your standing · rank #{e.rank}
+                  </p>
+                )}
                 <Link
                   href={href}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50"
@@ -372,7 +399,8 @@ export default function RankingsClient() {
 
       {!loading && total > entries.length && (
         <p className="text-center text-xs text-muted-foreground">
-          Showing {entries.length} of {total}
+          Showing top {entries.length} of {total}
+          {focusEntry && !focusInBoard ? ` · your #${focusEntry.rank} pinned below` : ''}
         </p>
       )}
 

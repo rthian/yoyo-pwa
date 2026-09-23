@@ -21,6 +21,7 @@ export async function GET(request: Request) {
     const division = (searchParams.get('division') || 'open') as 'open' | 'women'
     const search = searchParams.get('q')
     const race = (searchParams.get('race') || 'world').toLowerCase()
+    const focusMember = searchParams.get('member')
     const page = Math.max(1, Number(searchParams.get('page') || 1))
     const limit = Math.min(200, Math.max(1, Number(searchParams.get('limit') || 50)))
     const offset = (page - 1) * limit
@@ -69,7 +70,7 @@ export async function GET(request: Request) {
     }
 
     const isNational = race === 'national'
-    const { entries, total } = await getLeagueRankings(supabase, {
+    const { entries, total, focusEntry } = await getLeagueRankings(supabase, {
       seasonId,
       categoryId,
       geoPath: geoPath || '/WORLD',
@@ -78,6 +79,7 @@ export async function GET(request: Request) {
       countingResults,
       worldRaceOnly: !isNational,
       nationalRaceOnly: isNational,
+      focusMember,
       limit,
       offset,
     })
@@ -88,6 +90,7 @@ export async function GET(request: Request) {
         total,
         page,
         limit,
+        focusEntry,
         filters: {
           seasonId,
           categoryCode: categoryCode || 'all',
@@ -95,6 +98,7 @@ export async function GET(request: Request) {
           division: division === 'women' ? 'women' : 'open',
           race: isNational ? 'national' : 'world',
           q: search || '',
+          member: focusMember || '',
         },
       },
       {

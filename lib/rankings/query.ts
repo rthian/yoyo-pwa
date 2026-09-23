@@ -18,6 +18,8 @@ export interface RankingsQuery {
   worldRaceOnly?: boolean
   /** National Race: Regional + National tiers. */
   nationalRaceOnly?: boolean
+  /** public_id or member uuid — return focusEntry even outside the page window. */
+  focusMember?: string | null
   limit?: number
   offset?: number
 }
@@ -127,13 +129,18 @@ function rankList<
 export async function getLeagueRankings(
   supabase: SupabaseClient,
   query: RankingsQuery
-): Promise<{ entries: LeagueRankingEntry[]; total: number }> {
+): Promise<{
+  entries: LeagueRankingEntry[]
+  total: number
+  focusEntry: LeagueRankingEntry | null
+}> {
   const limit = query.limit ?? 100
   const offset = query.offset ?? 0
   const division = query.division ?? 'open'
+  const focusKey = query.focusMember?.trim() || ''
 
   if (query.eventIds && query.eventIds.length === 0) {
-    return { entries: [], total: 0 }
+    return { entries: [], total: 0, focusEntry: null }
   }
 
   let pointsQuery = supabase
@@ -177,7 +184,7 @@ export async function getLeagueRankings(
   const { data: rawRows, error } = await pointsQuery
   if (error) throw new Error(error.message)
 
-  if (!rawRows?.length) return { entries: [], total: 0 }
+  if (!rawRows?.length) return { entries: [], total: 0, focusEntry: null }
 
   const rows = (rawRows as unknown as PointsRow[]).filter((r) => {
     const tier = one(r.events?.event_tiers as
@@ -189,7 +196,7 @@ export async function getLeagueRankings(
     return true
   })
 
-  if (!rows.length) return { entries: [], total: 0 }
+  if (!rows.length) return { entries: [], total: 0, focusEntry: null }
 
   const memberById = new Map<string, AggMember>()
   for (const r of rows) {
@@ -301,8 +308,13 @@ export async function getLeagueRankings(
       division === 'women' ? (overallRankById.get(t.memberId) ?? null) : null,
   }))
 
+  const focusEntry = focusKey
+    ? entries.find((e) => e.publicId === focusKey || e.memberId === focusKey) ?? null
+    : null
+
   return {
     entries: entries.slice(offset, offset + limit),
     total: entries.length,
+    focusEntry,
   }
 }

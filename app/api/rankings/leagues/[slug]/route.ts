@@ -28,6 +28,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const geo = searchParams.get('geo')
     const division = (searchParams.get('division') as DivisionFilter) || 'open'
     const q = searchParams.get('q')
+    const focusMember = searchParams.get('member')
     const limit = Number(searchParams.get('limit') || 100)
     const offset = Number(searchParams.get('offset') || 0)
 
@@ -73,7 +74,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       geoPath = geo
     }
 
-    const { entries, total } = await getLeagueRankings(supabase, {
+    const { entries, total, focusEntry } = await getLeagueRankings(supabase, {
       seasonId: league.season_id,
       categoryId,
       geoPath,
@@ -81,6 +82,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       search: q,
       countingResults: league.counting_results,
       eventIds,
+      focusMember,
       limit,
       offset,
     })
@@ -91,6 +93,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         eventCount: eventIds.length,
         entries,
         total,
+        focusEntry,
       },
       {
         headers: {
