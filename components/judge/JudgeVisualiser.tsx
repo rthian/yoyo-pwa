@@ -14,7 +14,16 @@ import {
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, AlertTriangle, BarChart3, Users, ListChecks, EyeOff, GraduationCap } from 'lucide-react'
+import {
+  RefreshCw,
+  AlertTriangle,
+  BarChart3,
+  Users,
+  ListChecks,
+  EyeOff,
+  GraduationCap,
+  Sparkles,
+} from 'lucide-react'
 import type {
   VisualiserParticipant,
   VisualiserJudge,
@@ -35,6 +44,19 @@ interface VisualiserData {
   judgeSummaries: JudgeScoreSummary[]
 }
 
+interface TriageItem {
+  key: string
+  judgeId: string
+  decision: 'ok' | 'review' | 'exclude'
+  confidence: number
+  severity: number
+  looksLikeMistake: number
+  canAutoExclude: boolean
+  needsConfirmToExclude: boolean
+  currentlyIncluded: boolean
+  applyToken: string | null
+}
+
 interface JudgeVisualiserProps {
   divisionId: string
 }
@@ -45,10 +67,21 @@ function getParticipantLabel(p: VisualiserParticipant, index: number): string {
   return `${order}. ${name.split(' ')[0] ?? name}`
 }
 
+function decisionBadgeClass(decision: TriageItem['decision']) {
+  if (decision === 'exclude') return 'bg-destructive/15 text-destructive'
+  if (decision === 'review') return 'bg-amber-500/15 text-amber-800 dark:text-amber-200'
+  return 'bg-muted text-muted-foreground'
+}
+
 export default function JudgeVisualiser({ divisionId }: JudgeVisualiserProps) {
   const [data, setData] = useState<VisualiserData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [triageItems, setTriageItems] = useState<TriageItem[]>([])
+  const [triageLoading, setTriageLoading] = useState(false)
+  const [triageError, setTriageError] = useState<string | null>(null)
+  const [triageConfigured, setTriageConfigured] = useState<boolean | null>(null)
+  const [applyingJudgeId, setApplyingJudgeId] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -71,6 +104,73 @@ export default function JudgeVisualiser({ divisionId }: JudgeVisualiserProps) {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  const runTriage = useCallback(async () => {
+    setTriageLoading(true)
+    setTriageError(null)
+    try {
+      const res = await fetch(`/api/divisions/${divisionId}/outlier-triage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'evaluate' }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || `Triage failed: ${res.status}`)
+      setTriageConfigured(Boolean(json.configured))
+      setTriageItems(json.items ?? [])
+      if (!json.configured) {
+        setTriageError('TypeSafe is not configured on the server')
+      }
+    } catch (e) {
+      setTriageError(e instanceof Error ? e.message : 'Triage failed')
+    } finally {
+      setTriageLoading(false)
+    }
+  }, [divisionId])
+
+  const applyExclude = useCallback(
+    async (judgeId: string, applyToken: string, confirm = false) => {
+      setApplyingJudgeId(judgeId)
+      setTriageError(null)
+      try {
+        const res = await fetch(`/api/divisions/${divisionId}/outlier-triage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'apply', judgeId, applyToken, confirm }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (res.status === 409 && json.needsConfirm) {
+          const ok = window.confirm(
+            `Exclude this judge’s scores from results? Confidence ${(Number(json.confidence) * 100).toFixed(0)}% is below the auto threshold — confirm to proceed.`
+          )
+          if (ok) {
+            await applyExclude(judgeId, applyToken, true)
+          }
+          return
+        }
+        if (!res.ok) throw new Error(json.error || `Exclude failed: ${res.status}`)
+        setTriageItems((prev) =>
+          prev.map((t) =>
+            t.judgeId === judgeId
+              ? {
+                  ...t,
+                  currentlyIncluded: false,
+                  canAutoExclude: false,
+                  needsConfirmToExclude: false,
+                  applyToken: null,
+                }
+              : t
+          )
+        )
+        await fetchData()
+      } catch (e) {
+        setTriageError(e instanceof Error ? e.message : 'Exclude failed')
+      } finally {
+        setApplyingJudgeId(null)
+      }
+    },
+    [divisionId, fetchData]
+  )
 
   if (loading && !data) {
     return (
@@ -323,40 +423,94 @@ export default function JudgeVisualiser({ divisionId }: JudgeVisualiserProps) {
         </Card>
       )}
 
-      {/* Outlier list */}
+      {/* Outlier list + TypeSafe triage */}
       {outliers.length > 0 && (
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
             <CardTitle className="text-base flex items-center gap-2">
               <ListChecks className="h-4 w-4" />
               Score outliers
             </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={runTriage}
+              disabled={triageLoading}
+            >
+              <Sparkles className={`h-4 w-4 mr-2 ${triageLoading ? 'animate-pulse' : ''}`} />
+              {triageLoading ? 'Triaging…' : 'Suggest triage'}
+            </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            {triageError && (
+              <p className="text-sm text-destructive">{triageError}</p>
+            )}
+            {triageConfigured === false && !triageError && (
+              <p className="text-sm text-muted-foreground">
+                TypeSafe is not configured — triage unavailable.
+              </p>
+            )}
             <ul className="space-y-2 text-sm">
-              {outliers.map((o, i) => (
-                <li
-                  key={i}
-                  className="flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded border border-border px-3 py-2"
-                >
-                  <span className="font-medium">{o.judge_name}</span>
-                  <span className="text-muted-foreground">gave</span>
-                  <span className="font-medium">{o.participant_name}</span>
-                  <span className="text-muted-foreground">
-                    {o.score.toFixed(1)} (panel avg {o.panel_mean.toFixed(1)},{' '}
-                    {o.deviation >= 0 ? '+' : ''}
-                    {o.deviation.toFixed(1)})
-                  </span>
-                  {!o.is_submitted && (
-                    <span className="text-amber-600 dark:text-amber-400 text-xs">draft</span>
-                  )}
-                </li>
-              ))}
+              {outliers.map((o, i) => {
+                const key = `${o.judge_id}:${o.division_member_id}`
+                const triage = triageItems.find((t) => t.key === key)
+                return (
+                  <li
+                    key={i}
+                    className="flex flex-wrap items-center gap-x-2 gap-y-2 rounded border border-border px-3 py-2"
+                  >
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 min-w-0 flex-1">
+                      <span className="font-medium">{o.judge_name}</span>
+                      <span className="text-muted-foreground">gave</span>
+                      <span className="font-medium">{o.participant_name}</span>
+                      <span className="text-muted-foreground">
+                        {o.score.toFixed(1)} (panel avg {o.panel_mean.toFixed(1)},{' '}
+                        {o.deviation >= 0 ? '+' : ''}
+                        {o.deviation.toFixed(1)})
+                      </span>
+                      {!o.is_submitted && (
+                        <span className="text-amber-600 dark:text-amber-400 text-xs">draft</span>
+                      )}
+                    </div>
+                    {triage && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`rounded px-2 py-0.5 text-xs font-medium capitalize ${decisionBadgeClass(triage.decision)}`}
+                        >
+                          {triage.decision}{' '}
+                          {(triage.confidence * 100).toFixed(0)}%
+                        </span>
+                        {(triage.canAutoExclude || triage.needsConfirmToExclude) &&
+                          triage.currentlyIncluded &&
+                          triage.applyToken && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              disabled={applyingJudgeId === triage.judgeId}
+                              onClick={() =>
+                                applyExclude(
+                                  triage.judgeId,
+                                  triage.applyToken!,
+                                  triage.canAutoExclude
+                                )
+                              }
+                            >
+                              {applyingJudgeId === triage.judgeId
+                                ? 'Excluding…'
+                                : triage.canAutoExclude
+                                  ? 'Exclude judge from results'
+                                  : 'Exclude judge (confirm)'}
+                            </Button>
+                          )}
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           </CardContent>
         </Card>
       )}
-
       {outliers.length === 0 && scores.length > 0 && judgeSummaries.length > 0 && (
         <Card>
           <CardContent className="py-6 text-center text-sm text-muted-foreground">

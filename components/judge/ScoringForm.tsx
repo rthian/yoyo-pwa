@@ -1,10 +1,11 @@
 /**
- * Scoring Form Component
- * Mobile-optimized form for entering scores
+ * Scoring Form — Worlds-aligned TE clicker + FE categories + majors after E.Total.
+ * Callers: app/(judge)/judge/divisions/[id]/score/[participantId]/page.tsx
+ * User: "yes" (align to WYYC sheet)
  */
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -24,8 +25,25 @@ import {
 import { ArrowLeft, Save, Send, Loader2, User, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import ClickerInput from './ClickerInput'
+import ScoreSlider from './ScoreSlider'
 import JudgeRulesSheet from './JudgeRulesSheet'
+import TeClickerScreen from './TeClickerScreen'
 import { generateClientId, saveOfflineScore } from '@/lib/offline/queue'
+import {
+  hydrateTeFromExClicks,
+  hydrateMajors,
+  majorPoints,
+  teNet,
+  type MajorDeductionState,
+  type TeClickerState,
+} from '@/lib/judge/te-clicker'
+import {
+  FE_FIELD_MAP,
+  FE_LABELS,
+  computeScores,
+  majorsAreSeparate,
+  type ScoringConfigLike,
+} from '@/lib/judge/score-math'
 import type { Division, DivisionMember, Score, Member, Ruleset, ScoringType } from '@/lib/types/database'
 
 interface ParticipantWithMember extends DivisionMember {
@@ -52,6 +70,11 @@ interface ScoringFormProps {
   participant: ParticipantWithMember
   existingScore: Score | null
   judgeId: string
+  nextParticipant?: {
+    id: string
+    fullName: string
+    playOrder: number | null
+  } | null
 }
 
 function oneRuleset(
@@ -67,70 +90,114 @@ const scoringTypeLabels: Record<ScoringType, string> = {
   head_to_head: 'H2H',
 }
 
-// Score field configuration
-const scoreFields = [
-  { key: 'ex_clicks', label: 'Clicks', min: 0, max: 999, step: 1, isInteger: true },
-  { key: 'ex_pv', label: 'Positive/Variety', min: 0, max: 10, step: 0.5, isInteger: false },
-  { key: 'ex_ch', label: 'Choreography', min: 0, max: 10, step: 0.5, isInteger: false },
-  { key: 'ex_cons', label: 'Consistency', min: 0, max: 10, step: 0.5, isInteger: false },
-  { key: 'ex_space', label: 'Use of Space', min: 0, max: 10, step: 0.5, isInteger: false },
-  { key: 'ex_body', label: 'Body Control', min: 0, max: 10, step: 0.5, isInteger: false },
-  { key: 'ex_showman', label: 'Showmanship', min: 0, max: 10, step: 0.5, isInteger: false },
-  { key: 'ex_music', label: 'Music Use', min: 0, max: 10, step: 0.5, isInteger: false },
-  { key: 'ex_construct', label: 'Construction', min: 0, max: 10, step: 0.5, isInteger: false },
-  { key: 'ex_trick_div', label: 'Trick Diversity', min: 0, max: 10, step: 0.5, isInteger: false },
-  { key: 'ex_deductions', label: 'Deductions', min: 0, max: 50, step: 1, isInteger: true },
-] as const
+type ScoreKey =
+  | 'ex_clicks'
+  | 'ex_pv'
+  | 'ex_ch'
+  | 'ex_cons'
+  | 'ex_space'
+  | 'ex_body'
+  | 'ex_showman'
+  | 'ex_music'
+  | 'ex_construct'
+  | 'ex_trick_div'
+  | 'ex_deductions'
 
-type ScoreKey = typeof scoreFields[number]['key']
+type ScoringStep = 'te' | 'evaluation'
 
 export default function ScoringForm({
   division,
   participant,
   existingScore,
   judgeId,
+  nextParticipant = null,
 }: ScoringFormProps) {
   const router = useRouter()
-  
-  // Initialize scores from existing or defaults
-  const [scores, setScores] = useState<Record<ScoreKey, number>>(() => {
-    const initial: Record<string, number> = {}
-    scoreFields.forEach(field => {
-      initial[field.key] = existingScore?.[field.key as keyof Score] as number ?? 0
+  const [step, setStep] = useState<ScoringStep>('te')
+
+  const event = Array.isArray(division.event) ? division.event[0] : division.event
+  const ruleset = oneRuleset(event?.ruleset)
+  const scoringConfig = (ruleset?.scoring_config ?? null) as ScoringConfigLike | null
+  const scoringType = (division.scoring_type || 'standard') as ScoringType
+  const separateMajors = majorsAreSeparate(scoringConfig)
+  const majorMode = separateMajors ? 'separate' : 'integrated'
+
+  const [scores, setScores] = useState<Record<ScoreKey, number>>(() => ({
+    ex_clicks: existingScore?.ex_clicks ?? 0,
+    ex_pv: existingScore?.ex_pv ?? 0,
+    ex_ch: existingScore?.ex_ch ?? 0,
+    ex_cons: existingScore?.ex_cons ?? 0,
+    ex_space: existingScore?.ex_space ?? 0,
+    ex_body: existingScore?.ex_body ?? 0,
+    ex_showman: existingScore?.ex_showman ?? 0,
+    ex_music: existingScore?.ex_music ?? 0,
+    ex_construct: existingScore?.ex_construct ?? 0,
+    ex_trick_div: existingScore?.ex_trick_div ?? 0,
+    ex_deductions: existingScore?.ex_deductions ?? 0,
+  }))
+
+  const [teState, setTeState] = useState<TeClickerState>(() =>
+    hydrateTeFromExClicks(existingScore?.ex_clicks)
+  )
+  const [majors, setMajors] = useState<MajorDeductionState>(() =>
+    hydrateMajors({
+      md_stop_count: existingScore?.md_stop_count,
+      md_discard_count: existingScore?.md_discard_count,
+      md_detach_count: existingScore?.md_detach_count,
     })
-    return initial as Record<ScoreKey, number>
-  })
+  )
 
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  // Calculate totals
-  const calculateTotals = useCallback(() => {
-    const technical = scores.ex_clicks * 0.1 + 
-      scores.ex_pv + scores.ex_ch + scores.ex_cons
-    
-    const performance = scores.ex_space + scores.ex_body + 
-      scores.ex_showman + scores.ex_music + 
-      scores.ex_construct + scores.ex_trick_div
+  const handleTeChange = useCallback((next: TeClickerState) => {
+    setTeState(next)
+    setScores((prev) => ({ ...prev, ex_clicks: teNet(next) }))
+  }, [])
 
-    const total = technical + performance - scores.ex_deductions
+  const handleMajorsChange = useCallback((next: MajorDeductionState) => {
+    setMajors(next)
+    setScores((prev) => ({
+      ...prev,
+      ex_deductions: majorPoints(next),
+    }))
+  }, [])
 
-    return {
-      technical: Math.max(0, technical),
-      performance: Math.max(0, performance),
-      total: Math.max(0, total),
-    }
-  }, [scores])
+  const scoreFieldsForMath = useMemo(
+    () => ({
+      ...scores,
+      ex_clicks: teNet(teState),
+      md_stop_count: majors.stopCount,
+      md_discard_count: majors.discardCount,
+      md_detach_count: majors.detachCount,
+      ex_deductions: majorPoints(majors),
+    }),
+    [scores, teState, majors]
+  )
 
-  const totals = calculateTotals()
-  const event = Array.isArray(division.event) ? division.event[0] : division.event
-  const ruleset = oneRuleset(event?.ruleset)
-  const scoringType = (division.scoring_type || 'standard') as ScoringType
+  const computed = useMemo(
+    () =>
+      computeScores(scoreFieldsForMath, scoringConfig, division.round_type ?? 'final'),
+    [scoreFieldsForMath, scoringConfig, division.round_type]
+  )
 
+  const feKeys = computed.feCategoryKeys
 
   const handleScoreChange = (key: ScoreKey, value: number) => {
-    setScores(prev => ({ ...prev, [key]: value }))
+    setScores((prev) => ({ ...prev, [key]: value }))
+    if (key === 'ex_clicks') {
+      setTeState(hydrateTeFromExClicks(value))
+    }
   }
+
+  const payloadScores = () => ({
+    ...scores,
+    ex_clicks: teNet(teState),
+    ex_deductions: majorPoints(majors),
+    md_stop_count: majors.stopCount,
+    md_discard_count: majors.discardCount,
+    md_detach_count: majors.detachCount,
+  })
 
   const saveOffline = async () => {
     await saveOfflineScore({
@@ -138,7 +205,7 @@ export default function ScoringForm({
       divisionId: division.id,
       divisionMemberId: participant.id,
       judgeId,
-      scoreData: scores,
+      scoreData: payloadScores(),
       timestamp: Date.now(),
     })
     toast.success('Saved offline — will sync when you are back online')
@@ -157,7 +224,7 @@ export default function ScoringForm({
       const scorePayload = {
         division_id: division.id,
         division_member_id: participant.id,
-        ...scores,
+        ...payloadScores(),
         is_submitted: isSubmit,
       }
 
@@ -173,16 +240,20 @@ export default function ScoringForm({
       }
 
       toast.success(isSubmit ? 'Score submitted!' : 'Score saved as draft')
-      
+
       if (isSubmit) {
-        router.push(`/judge/divisions/${division.id}`)
+        if (nextParticipant) {
+          router.push(`/judge/divisions/${division.id}/score/${nextParticipant.id}`)
+        } else {
+          router.push(`/judge/divisions/${division.id}`)
+        }
       }
-      
+
       router.refresh()
     } catch (error) {
       const offline =
         (typeof navigator !== 'undefined' && !navigator.onLine) ||
-        (error instanceof TypeError)
+        error instanceof TypeError
       if (offline) {
         try {
           await saveOffline()
@@ -198,6 +269,9 @@ export default function ScoringForm({
     }
   }
 
+  const teWeight = typeof scoringConfig?.te_weight === 'number' ? scoringConfig.te_weight : 60
+  const feWeight = typeof scoringConfig?.fe_weight === 'number' ? scoringConfig.fe_weight : 40
+
   return (
     <div className="space-y-4 pb-44">
       <div className="sticky top-0 z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur border-b">
@@ -212,6 +286,7 @@ export default function ScoringForm({
             <p className="text-xs text-muted-foreground truncate">
               {division.name}
               {participant.play_order != null ? ` · #${participant.play_order}` : ''}
+              {step === 'te' ? ' · Live TE' : ' · FE Evaluation'}
             </p>
           </div>
           <Badge variant="outline" className="rounded-full shrink-0">
@@ -236,199 +311,256 @@ export default function ScoringForm({
         )}
       </div>
 
-      {/* Participant Info */}
-      <Card>
-        <CardContent className="flex items-center gap-4 p-4">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <User className="h-6 w-6 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-lg">{participant.member.full_name}</p>
-            {participant.member.nickname && (
-              <p className="text-muted-foreground">&quot;{participant.member.nickname}&quot;</p>
-            )}
-            {participant.member.country && (
-              <p className="text-sm text-muted-foreground">{participant.member.country}</p>
-            )}
-          </div>
-          <Badge variant="outline" className="rounded-full">#{participant.play_order || '?'}</Badge>
-        </CardContent>
-      </Card>
+      {step === 'te' ? (
+        <TeClickerScreen
+          state={teState}
+          majors={majors}
+          majorMode={majorMode}
+          onTeChange={handleTeChange}
+          onMajorsChange={handleMajorsChange}
+          onContinueToEvaluation={() => setStep('evaluation')}
+        />
+      ) : (
+        <>
+          <Card>
+            <CardContent className="flex items-center gap-4 p-4">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-lg">{participant.member.full_name}</p>
+                {participant.member.nickname && (
+                  <p className="text-muted-foreground">
+                    &quot;{participant.member.nickname}&quot;
+                  </p>
+                )}
+              </div>
+              <Badge variant="outline" className="rounded-full">
+                #{participant.play_order || '?'}
+              </Badge>
+            </CardContent>
+          </Card>
 
-      {/* Technical Scores - large touch targets for eyes-free use */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base tracking-tight">
-            Technical Execution
-            {typeof ruleset?.scoring_config?.te_weight === 'number' && (
-              <span className="ml-2 text-xs font-normal text-muted-foreground">
-                ({String(ruleset.scoring_config.te_weight)}%)
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {scoreFields.slice(0, 4).map(field => (
-            <ClickerInput
-              key={field.key}
-              label={field.label}
-              value={scores[field.key]}
-              onChange={(v) => handleScoreChange(field.key, v)}
-              min={field.min}
-              max={field.max}
-              step={field.step}
-              isInteger={field.isInteger}
-            />
-          ))}
-        </CardContent>
-      </Card>
+          {nextParticipant && (
+            <p className="text-xs text-muted-foreground px-1">
+              After submit → #{nextParticipant.playOrder ?? '?'} {nextParticipant.fullName}
+            </p>
+          )}
 
-      {/* Performance Scores */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base tracking-tight">
-            Performance
-            {typeof ruleset?.scoring_config?.fe_weight === 'number' && (
-              <span className="ml-2 text-xs font-normal text-muted-foreground">
-                ({String(ruleset.scoring_config.fe_weight)}%)
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {scoreFields.slice(4, 10).map(field => (
-            <ClickerInput
-              key={field.key}
-              label={field.label}
-              value={scores[field.key]}
-              onChange={(v) => handleScoreChange(field.key, v)}
-              min={field.min}
-              max={field.max}
-              step={field.step}
-              isInteger={field.isInteger}
-            />
-          ))}
-        </CardContent>
-      </Card>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-11 rounded-full"
+            onClick={() => setStep('te')}
+          >
+            Back to live TE
+          </Button>
 
-      {/* Deductions */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base text-destructive tracking-tight">Deductions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ClickerInput
-            label={scoreFields[10].label}
-            value={scores.ex_deductions}
-            onChange={(v) => handleScoreChange('ex_deductions', v)}
-            min={0}
-            max={50}
-            step={1}
-            isInteger={true}
-            variant="destructive"
-          />
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base tracking-tight">
+                Freestyle Evaluation (FE)
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  → /{feWeight}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {feKeys.map((key) => {
+                const col = FE_FIELD_MAP[key] as ScoreKey | undefined
+                if (!col || col === 'ex_clicks' || col === 'ex_deductions') return null
+                return (
+                  <ScoreSlider
+                    key={key}
+                    label={FE_LABELS[key] ?? key}
+                    value={scores[col]}
+                    onChange={(v) => handleScoreChange(col, v)}
+                    min={0}
+                    max={10}
+                    step={0.5}
+                  />
+                )
+              })}
+            </CardContent>
+          </Card>
 
-      {/* Totals + actions docked above bottom nav */}
+          {separateMajors && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-destructive tracking-tight">
+                  Major Deductions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ClickerInput
+                  label="Stop (−1 each)"
+                  value={majors.stopCount}
+                  onChange={(v) =>
+                    handleMajorsChange({ ...majors, stopCount: Math.max(0, Math.trunc(v)) })
+                  }
+                  min={0}
+                  max={99}
+                  step={1}
+                  isInteger
+                  variant="destructive"
+                />
+                <ClickerInput
+                  label="Discard (−3 each)"
+                  value={majors.discardCount}
+                  onChange={(v) =>
+                    handleMajorsChange({
+                      ...majors,
+                      discardCount: Math.max(0, Math.trunc(v)),
+                    })
+                  }
+                  min={0}
+                  max={99}
+                  step={1}
+                  isInteger
+                  variant="destructive"
+                />
+                <ClickerInput
+                  label="Cut / Detach (−5 each)"
+                  value={majors.detachCount}
+                  onChange={(v) =>
+                    handleMajorsChange({
+                      ...majors,
+                      detachCount: Math.max(0, Math.trunc(v)),
+                    })
+                  }
+                  min={0}
+                  max={99}
+                  step={1}
+                  isInteger
+                  variant="destructive"
+                />
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+
       <div className="fixed bottom-16 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur safe-area-bottom">
         <div className="mx-auto max-w-lg bg-primary/10 border-b border-primary/20 px-4 py-3">
-          <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="grid grid-cols-4 gap-2 text-center">
             <div>
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Tech</p>
-              <p className="text-lg font-bold font-mono tabular-nums">{totals.technical.toFixed(1)}</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                TE/{teWeight}
+              </p>
+              <p className="text-lg font-bold font-mono tabular-nums">
+                {computed.technical.toFixed(1)}
+              </p>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Perf</p>
-              <p className="text-lg font-bold font-mono tabular-nums">{totals.performance.toFixed(1)}</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                FE/{feWeight}
+              </p>
+              <p className="text-lg font-bold font-mono tabular-nums">
+                {computed.performance.toFixed(1)}
+              </p>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Total</p>
-              <p className="text-2xl font-bold font-mono tabular-nums text-primary">{totals.total.toFixed(1)}</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                E.Total
+              </p>
+              <p className="text-lg font-bold font-mono tabular-nums">
+                {computed.eTotal.toFixed(1)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                Final
+              </p>
+              <p className="text-xl font-bold font-mono tabular-nums text-primary">
+                {computed.total.toFixed(1)}
+              </p>
             </div>
           </div>
+          {computed.majorPoints > 0 && (
+            <p className="mt-1 text-center text-[10px] text-destructive">
+              Majors −{computed.majorPoints}
+            </p>
+          )}
         </div>
         <div className="p-3">
-        <div className="flex gap-3 max-w-lg mx-auto">
-          <Button
-            variant="secondary"
-            className="flex-1 h-12 text-base rounded-full"
-            onClick={() => saveScore(false)}
-            disabled={saving || submitting}
-          >
-            {saving ? (
-              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-5 w-5 mr-2" />
-            )}
-            Save Draft
-          </Button>
-          
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                className="flex-1 h-12 text-base rounded-full"
-                disabled={saving || submitting}
-              >
-                {submitting ? (
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                ) : (
-                  <Send className="h-5 w-5 mr-2" />
-                )}
-                Submit
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="max-w-sm mx-4">
-              <AlertDialogHeader>
-                <AlertDialogTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  {existingScore?.is_submitted ? 'Overwrite Submitted Score?' : 'Confirm Submission'}
-                </AlertDialogTitle>
-                <AlertDialogDescription asChild>
-                  <div className="text-muted-foreground text-sm text-left space-y-2">
-                    {existingScore?.is_submitted ? (
-                      <>
-                        <span className="block">You are about to overwrite an existing submitted score for <strong className="text-foreground">{participant.member.full_name}</strong>. This will replace the previous submission.</span>
-                        <span className="block text-amber-600 dark:text-amber-400 font-medium">Continue?</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="block">You are about to submit scores for:</span>
-                        <span className="block font-semibold text-foreground">{participant.member.full_name}</span>
-                      </>
-                    )}
-                    <div className="mt-3 p-3 bg-muted rounded-lg">
-                      <div className="flex justify-between text-sm">
-                        <span>Technical:</span>
-                        <span className="font-medium">{totals.technical.toFixed(1)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Performance:</span>
-                        <span className="font-medium">{totals.performance.toFixed(1)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm font-semibold border-t pt-1 mt-1">
-                        <span>Total:</span>
-                        <span className="text-primary">{totals.total.toFixed(1)}</span>
+          <div className="flex gap-3 max-w-lg mx-auto">
+            <Button
+              variant="secondary"
+              className="flex-1 h-12 text-base rounded-full"
+              onClick={() => saveScore(false)}
+              disabled={saving || submitting}
+            >
+              {saving ? (
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-5 w-5 mr-2" />
+              )}
+              Save Draft
+            </Button>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  className="flex-1 h-12 text-base rounded-full"
+                  disabled={saving || submitting}
+                >
+                  {submitting ? (
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="h-5 w-5 mr-2" />
+                  )}
+                  Submit
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="max-w-sm mx-4">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    {existingScore?.is_submitted
+                      ? 'Overwrite Submitted Score?'
+                      : 'Confirm Submission'}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="text-muted-foreground text-sm text-left space-y-2">
+                      <span className="block font-semibold text-foreground">
+                        {participant.member.full_name}
+                      </span>
+                      <div className="mt-3 p-3 bg-muted rounded-lg space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span>TE /{teWeight}</span>
+                          <span className="font-medium">{computed.technical.toFixed(1)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>FE /{feWeight}</span>
+                          <span className="font-medium">{computed.performance.toFixed(1)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>E.Total</span>
+                          <span className="font-medium">{computed.eTotal.toFixed(1)}</span>
+                        </div>
+                        {computed.majorPoints > 0 && (
+                          <div className="flex justify-between text-destructive">
+                            <span>Majors</span>
+                            <span className="font-medium">−{computed.majorPoints}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between font-semibold border-t pt-1 mt-1">
+                          <span>Final</span>
+                          <span className="text-primary">{computed.total.toFixed(1)}</span>
+                        </div>
                       </div>
                     </div>
-                    <span className="block text-xs text-muted-foreground mt-2">
-                      This action cannot be easily undone.
-                    </span>
-                  </div>
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter className="flex-row gap-2">
-                <AlertDialogCancel className="flex-1 m-0">Cancel</AlertDialogCancel>
-                <AlertDialogAction 
-                  className="flex-1 m-0" 
-                  onClick={() => saveScore(true)}
-                >
-                  Confirm Submit
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-row gap-2">
+                  <AlertDialogCancel className="flex-1 m-0">Cancel</AlertDialogCancel>
+                  <AlertDialogAction className="flex-1 m-0" onClick={() => saveScore(true)}>
+                    Confirm Submit
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       </div>
     </div>

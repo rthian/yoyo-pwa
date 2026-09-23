@@ -2,11 +2,17 @@
  * Scores API Route
  * Handles score creation, updates, and retrieval
  * Uses admin client to bypass RLS for all DB queries
+ * Callers: ScoringForm, offline sync. Math: lib/judge/score-math.ts
  */
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 import { scoreSchema } from '@/lib/validations'
+import {
+  computeScores,
+  majorDeductionPoints,
+  type ScoringConfigLike,
+} from '@/lib/judge/score-math'
 
 // Create or update a score
 export async function POST(request: Request) {
@@ -67,10 +73,16 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if division is locked
+    // Check if division is locked + load round/ruleset for score math
     const { data: division } = await supabaseAdmin
       .from('divisions')
-      .select('scoring_locked')
+      .select(`
+        scoring_locked,
+        round_type,
+        event:events(
+          ruleset:rulesets(scoring_config)
+        )
+      `)
       .eq('id', scoreData.division_id)
       .single()
 
@@ -81,20 +93,38 @@ export async function POST(request: Request) {
       )
     }
 
-    // Calculate score totals
-    const technical = (scoreData.ex_clicks || 0) * 0.1 + 
-      (scoreData.ex_pv || 0) + 
-      (scoreData.ex_ch || 0) + 
-      (scoreData.ex_cons || 0)
-    
-    const performance = (scoreData.ex_space || 0) + 
-      (scoreData.ex_body || 0) + 
-      (scoreData.ex_showman || 0) + 
-      (scoreData.ex_music || 0) + 
-      (scoreData.ex_construct || 0) + 
-      (scoreData.ex_trick_div || 0)
+    type EventJoin = {
+      ruleset: { scoring_config: ScoringConfigLike } | { scoring_config: ScoringConfigLike }[] | null
+    } | null
+    const eventRaw = division?.event as EventJoin | EventJoin[] | undefined
+    const event = Array.isArray(eventRaw) ? eventRaw[0] : eventRaw
+    const rulesetRaw = event?.ruleset
+    const ruleset = Array.isArray(rulesetRaw) ? rulesetRaw[0] : rulesetRaw
+    const scoringConfig = (ruleset?.scoring_config ?? null) as ScoringConfigLike | null
 
-    const total = Math.max(0, technical + performance - (scoreData.ex_deductions || 0))
+    const mdStop = scoreData.md_stop_count ?? 0
+    const mdDiscard = scoreData.md_discard_count ?? 0
+    const mdDetach = scoreData.md_detach_count ?? 0
+    const fields = {
+      ...scoreData,
+      md_stop_count: mdStop,
+      md_discard_count: mdDiscard,
+      md_detach_count: mdDetach,
+      ex_deductions: majorDeductionPoints({
+        ...scoreData,
+        md_stop_count: mdStop,
+        md_discard_count: mdDiscard,
+        md_detach_count: mdDetach,
+      }),
+    }
+    const computed = computeScores(
+      fields,
+      scoringConfig,
+      division?.round_type ?? 'final'
+    )
+    const technical = computed.technical
+    const performance = computed.performance
+    const total = computed.total
 
     // Check if score already exists
     const { data: existingScore } = await supabaseAdmin
@@ -117,6 +147,10 @@ export async function POST(request: Request) {
     const now = new Date().toISOString()
     const finalScoreData = {
       ...scoreData,
+      md_stop_count: fields.md_stop_count,
+      md_discard_count: fields.md_discard_count,
+      md_detach_count: fields.md_detach_count,
+      ex_deductions: fields.ex_deductions,
       judge_id: user.id,
       technical_score: technical,
       performance_score: performance,

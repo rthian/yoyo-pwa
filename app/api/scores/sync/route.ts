@@ -6,6 +6,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
+import {
+  computeScores,
+  majorDeductionPoints,
+  type ScoringConfigLike,
+  type ScoreFields,
+} from '@/lib/judge/score-math'
 
 interface OfflineScore {
   clientId: string
@@ -77,21 +83,53 @@ export async function POST(request: Request) {
           continue
         }
 
-        // Calculate totals
+        // Calculate totals (IYYF / AP / legacy via shared math)
         const { scoreData } = offlineScore
-        const technical = (scoreData.ex_clicks || 0) * 0.1 + 
-          (scoreData.ex_pv || 0) + 
-          (scoreData.ex_ch || 0) + 
-          (scoreData.ex_cons || 0)
-        
-        const performance = (scoreData.ex_space || 0) + 
-          (scoreData.ex_body || 0) + 
-          (scoreData.ex_showman || 0) + 
-          (scoreData.ex_music || 0) + 
-          (scoreData.ex_construct || 0) + 
-          (scoreData.ex_trick_div || 0)
+        const { data: divMeta } = await supabaseAdmin
+          .from('divisions')
+          .select(`
+            round_type,
+            event:events(ruleset:rulesets(scoring_config))
+          `)
+          .eq('id', offlineScore.divisionId)
+          .single()
 
-        const total = Math.max(0, technical + performance - (scoreData.ex_deductions || 0))
+        type EventJoin = {
+          ruleset:
+            | { scoring_config: ScoringConfigLike }
+            | { scoring_config: ScoringConfigLike }[]
+            | null
+        } | null
+        const eventRaw = divMeta?.event as EventJoin | EventJoin[] | undefined
+        const event = Array.isArray(eventRaw) ? eventRaw[0] : eventRaw
+        const rulesetRaw = event?.ruleset
+        const ruleset = Array.isArray(rulesetRaw) ? rulesetRaw[0] : rulesetRaw
+        const scoringConfig = (ruleset?.scoring_config ?? null) as ScoringConfigLike | null
+
+        const fields = {
+          ex_clicks: scoreData.ex_clicks || 0,
+          ex_pv: scoreData.ex_pv || 0,
+          ex_ch: scoreData.ex_ch || 0,
+          ex_cons: scoreData.ex_cons || 0,
+          ex_space: scoreData.ex_space || 0,
+          ex_body: scoreData.ex_body || 0,
+          ex_showman: scoreData.ex_showman || 0,
+          ex_music: scoreData.ex_music || 0,
+          ex_construct: scoreData.ex_construct || 0,
+          ex_trick_div: scoreData.ex_trick_div || 0,
+          md_stop_count: scoreData.md_stop_count || 0,
+          md_discard_count: scoreData.md_discard_count || 0,
+          md_detach_count: scoreData.md_detach_count || 0,
+        } as ScoreFields
+        fields.ex_deductions = majorDeductionPoints(fields)
+        const computed = computeScores(
+          fields,
+          scoringConfig,
+          divMeta?.round_type ?? 'final'
+        )
+        const technical = computed.technical
+        const performance = computed.performance
+        const total = computed.total
 
         // Check for existing score
         const { data: existing } = await supabaseAdmin
@@ -106,6 +144,10 @@ export async function POST(request: Request) {
           division_member_id: offlineScore.divisionMemberId,
           judge_id: user.id,
           ...scoreData,
+          md_stop_count: fields.md_stop_count,
+          md_discard_count: fields.md_discard_count,
+          md_detach_count: fields.md_detach_count,
+          ex_deductions: fields.ex_deductions,
           technical_score: technical,
           performance_score: performance,
           total_score: total,

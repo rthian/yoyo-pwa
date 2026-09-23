@@ -100,6 +100,9 @@ export interface Score {
   ex_construct: number
   ex_trick_div: number
   ex_deductions: number
+  md_stop_count?: number
+  md_discard_count?: number
+  md_detach_count?: number
   
   // Calculated totals
   technical_score: number

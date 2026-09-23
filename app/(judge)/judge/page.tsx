@@ -48,10 +48,6 @@ export default async function JudgeHomePage() {
     .eq('judge_id', user.id)
     .eq('is_submitted', true)
 
-  const firstActiveDivision = assignments?.find(
-    (a) => a.division?.event?.status === 'active'
-  )?.division
-
   return (
     <div className="space-y-4 pb-4">
       {/* Pending hero */}
@@ -71,7 +67,7 @@ export default async function JudgeHomePage() {
           </div>
           <div className="flex gap-2">
             <Button asChild className="flex-1 h-12 rounded-full">
-              <Link href={firstActiveDivision ? `/judge/divisions/${firstActiveDivision.id}` : '/judge/queue'}>
+              <Link href="/judge/queue">
                 <Gavel className="h-5 w-5 mr-2" />
                 {pendingCount > 0 ? 'Continue scoring' : 'Open queue'}
               </Link>

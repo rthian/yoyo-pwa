@@ -67,8 +67,8 @@ export const scoreSchema = z.object({
   division_member_id: z.string().uuid('Invalid member ID'),
   judge_id: z.string().uuid('Invalid judge ID'),
   
-  // Scoring fields with validation
-  ex_clicks: z.number().int().min(0).max(999).default(0),
+  // Scoring fields with validation (ex_clicks may be net pos−neg, can be negative mid-routine)
+  ex_clicks: z.number().int().min(-999).max(999).default(0),
   ex_pv: z.number().min(0).max(10).default(0),
   ex_ch: z.number().min(0).max(10).default(0),
   ex_cons: z.number().min(0).max(10).default(0),
@@ -79,6 +79,9 @@ export const scoreSchema = z.object({
   ex_construct: z.number().min(0).max(10).default(0),
   ex_trick_div: z.number().min(0).max(10).default(0),
   ex_deductions: z.number().int().min(0).max(50).default(0),
+  md_stop_count: z.number().int().min(0).max(99).default(0),
+  md_discard_count: z.number().int().min(0).max(99).default(0),
+  md_detach_count: z.number().int().min(0).max(99).default(0),
 })
 
 export type ScoreFormData = z.infer<typeof scoreSchema>

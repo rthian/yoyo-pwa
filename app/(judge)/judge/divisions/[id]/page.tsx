@@ -16,10 +16,12 @@ import {
   Clock, 
   ChevronRight,
   Trophy,
-  Lock
+  Lock,
+  Gavel,
 } from 'lucide-react'
 import LockDivisionButton from '@/components/judge/LockDivisionButton'
 import DivisionPageTabs from '@/components/judge/DivisionPageTabs'
+import { nextInQueue, type ScoringQueueItem } from '@/lib/judge/scoring-queue'
 
 interface DivisionPageProps {
   params: Promise<{ id: string }>
@@ -98,6 +100,27 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
   const scoringLocked = division.scoring_locked === true
   const isHeadJudgeOrAdmin = assignment.judge_type === 'head' || currentMember?.role === 'admin'
 
+  const queueItems: ScoringQueueItem[] = (participants ?? []).map((p, index) => {
+    const score = scoresMap[p.id]
+    let status: ScoringQueueItem['status'] = 'pending'
+    if (score?.is_submitted) status = 'submitted'
+    else if (score) status = 'draft'
+    return {
+      divisionId,
+      divisionName: division.name,
+      eventName: division.event?.name ?? '',
+      eventDate: division.event?.event_date ?? null,
+      divisionMemberId: p.id,
+      participantName: p.member?.full_name ?? 'Unknown',
+      nickname: p.member?.nickname ?? null,
+      playOrder: p.play_order ?? index + 1,
+      status,
+      totalScore: score?.total_score != null ? Number(score.total_score) : null,
+      scoringLocked,
+    }
+  })
+  const upNext = nextInQueue(queueItems)
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -155,6 +178,38 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
           </CardContent>
         </Card>
 
+        {/* Up next by play_order */}
+        {upNext && !scoringLocked && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="p-4 space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Up next · play order
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold tabular-nums shrink-0">
+                  {upNext.playOrder ?? '—'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold truncate">{upNext.participantName}</p>
+                  {upNext.status === 'draft' && (
+                    <Badge variant="outline" className="text-yellow-600 mt-1">
+                      Draft in progress
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <Button asChild className="w-full h-12 rounded-full">
+                <Link
+                  href={`/judge/divisions/${divisionId}/score/${upNext.divisionMemberId}`}
+                >
+                  <Gavel className="h-5 w-5 mr-2" />
+                  Score now
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Participants List */}
         <div className="space-y-2">
           <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -167,12 +222,13 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
               {participants.map((participant, index) => {
                 const score = scoresMap[participant.id]
                 const isScored = score?.is_submitted
+                const isUpNext = upNext?.divisionMemberId === participant.id
 
                 const cardContent = (
-                    <Card className={`transition-colors ${!scoringLocked && 'hover:bg-accent active:scale-[0.98]'} ${scoringLocked && 'opacity-75'} ${isScored ? 'border-green-500/50' : ''}`}>
+                    <Card className={`transition-colors ${!scoringLocked && 'hover:bg-accent active:scale-[0.98]'} ${scoringLocked && 'opacity-75'} ${isScored ? 'border-green-500/50' : ''} ${isUpNext && !isScored ? 'border-primary ring-1 ring-primary/40' : ''}`}>
                       <CardContent className="flex items-center gap-4 p-4">
                         {/* Order number */}
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isUpNext && !isScored ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
                           <span className="text-sm font-bold">
                             {participant.play_order || index + 1}
                           </span>
@@ -184,6 +240,9 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
                             {participant.member?.full_name}
                           </p>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            {isUpNext && !isScored && (
+                              <span className="text-primary font-medium">Up next</span>
+                            )}
                             {participant.member?.nickname && (
                               <span>"{participant.member.nickname}"</span>
                             )}
@@ -238,7 +297,6 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
             </Card>
           )}
         </div>
-      </DivisionPageTabs>
-    </div>
+      </DivisionPageTabs>    </div>
   )
 }
