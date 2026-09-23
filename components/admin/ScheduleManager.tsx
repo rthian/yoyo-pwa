@@ -77,6 +77,7 @@ export default function ScheduleManager({ eventId }: ScheduleManagerProps) {
 
   useEffect(() => {
     fetchEntries()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
 
   const fetchEntries = async () => {

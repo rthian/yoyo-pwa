@@ -16,10 +16,18 @@ A Progressive Web Application for managing yo-yo competition events, judging, an
 - **Mobile Scoring**: Touch-optimized scoring form with number steppers
 - **Offline Support**: Score offline and sync when connected
 - **Score Queue**: Track pending and completed scores
+- **Score Overwrite UX**: Confirmation dialog when overwriting a submitted score; shows last-updated timestamp
+
+### Head Judge Features
+- **Division Scoring Lock**: Lock/unlock scoring for a division; locked divisions reject new score submissions
+- **Judge Visualiser**: Panel analytics tab with grouped score charts, judge deviation from panel mean, and outlier detection
+- **Judge Exclusion**: Toggle whether a judge's scores count in leaderboard calculations
+- **Shadow Judge Type**: Training-only judges whose scores never appear in results
 
 ### Leaderboard
 - **Real-time Updates**: Live score updates via Supabase Realtime
 - **Public Sharing**: Generate shareable links for spectators
+- **Hide Until Complete**: Option to hide scores from the public leaderboard until division scoring is locked
 - **Mobile-Friendly**: Responsive design for any device
 
 ## Tech Stack
@@ -30,6 +38,7 @@ A Progressive Web Application for managing yo-yo competition events, judging, an
 - **Styling**: Tailwind CSS + shadcn/ui
 - **PWA**: @ducanh2912/next-pwa
 - **Offline Storage**: localforage (IndexedDB)
+- **Charts**: recharts (head judge visualiser)
 - **Form Validation**: Zod + React Hook Form
 
 ## Getting Started
@@ -162,13 +171,13 @@ Key tables:
 
 - `members` - Users (admins, judges, competitors)
 - `events` - Competition events
-- `divisions` - Event divisions/categories
+- `divisions` - Event divisions/categories (`scoring_locked`, `hide_scores_until_complete`)
 - `division_members` - Participants in each division
-- `division_judges` - Judges assigned to divisions
+- `division_judges` - Judges assigned to divisions (`judge_type` incl. `shadow`, `scores_included_in_leaderboard`)
 - `scores` - Individual scores from judges
 - `leaderboard_tokens` - Public share tokens
 
-See `supabase/schema.sql` for the complete schema.
+See `supabase/schema.sql` for the complete schema. Apply migrations in order from `supabase/migrations/`.
 
 ## Authentication Flow
 

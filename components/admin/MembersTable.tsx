@@ -160,7 +160,7 @@ export default function MembersTable({ members }: MembersTableProps) {
                   </Link>
                   {member.nickname && (
                     <p className="text-sm text-muted-foreground">
-                      "{member.nickname}"
+                      &ldquo;{member.nickname}&rdquo;
                     </p>
                   )}
                 </TableCell>

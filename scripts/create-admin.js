@@ -2,9 +2,11 @@
  * Script to create an admin user directly via Supabase service role
  * This bypasses RLS policies
  */
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 // Read .env.local file
 const envPath = path.join(__dirname, '..', '.env.local');

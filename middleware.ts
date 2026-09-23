@@ -8,11 +8,6 @@ import { updateSession } from '@/lib/supabase/middleware'
 // Routes that require authentication
 const protectedRoutes = ['/admin', '/judge', '/member']
 
-// Routes that require specific roles (checked at page level)
-const adminRoutes = ['/admin']
-const judgeRoutes = ['/judge']
-const memberRoutes = ['/member']
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 

@@ -4,20 +4,17 @@
  */
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  ArrowLeft, 
-  Calendar, 
-  MapPin, 
-  Edit, 
-  Plus, 
-  Users, 
-  Trophy,
-  Trash2 
+import {
+  ArrowLeft,
+  Calendar,
+  MapPin,
+  Edit,
+  Plus,
+  Users,
+  Trophy
 } from 'lucide-react'
 import DivisionsList from '@/components/admin/DivisionsList'
 import EventStatusActions from '@/components/admin/EventStatusActions'

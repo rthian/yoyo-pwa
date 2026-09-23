@@ -37,12 +37,14 @@ function getInitials(name: string): string {
 export default function JudgeHeader({ member }: JudgeHeaderProps) {
   const router = useRouter()
   const supabase = createClient()
-  const [isOnline, setIsOnline] = useState(true)
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof window !== 'undefined' ? navigator.onLine : true
+  )
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
-    setIsOnline(navigator.onLine)
 
     const handleOnline = () => setIsOnline(true)
     const handleOffline = () => setIsOnline(false)
