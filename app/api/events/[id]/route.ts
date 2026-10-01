@@ -9,9 +9,16 @@ import {
   requireEventCapabilityResponse,
 } from '@/lib/auth/request'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { validateEventTimingOrder } from '@/lib/events/timing'
 
 interface RouteParams {
   params: Promise<{ id: string }>
+}
+
+function omitUndefined<T extends Record<string, unknown>>(obj: T) {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined)
+  ) as Partial<T>
 }
 
 export async function GET(_request: Request, { params }: RouteParams) {
@@ -65,9 +72,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     )
     if (denied) return denied
 
+    const timingError = validateEventTimingOrder(validationResult.data)
+    if (timingError) {
+      return NextResponse.json({ error: timingError }, { status: 400 })
+    }
+
     const { data: event, error } = await auth.supabaseAdmin
       .from('events')
-      .update(validationResult.data)
+      .update(omitUndefined(validationResult.data as Record<string, unknown>))
       .eq('id', id)
       .select()
       .single()

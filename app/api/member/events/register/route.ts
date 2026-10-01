@@ -2,11 +2,12 @@
  * Member Event Registration API Route
  * Allows members to register/unregister for event divisions
  * Called by: components/events/EventHubClient.tsx, app/(member)/member/events/page.tsx
- * User: "yes" (start event hub) — repair after max_participants removal
+ * Enforces registration window on the server (Prompt 4).
  */
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
+import { getRegistrationAvailability } from '@/lib/events/timing'
 
 export async function POST(request: Request) {
   try {
@@ -38,7 +39,11 @@ export async function POST(request: Request) {
       .select(
         `
         id,
-        event:events(id, status)
+        event:events(
+          id, status, event_date, starts_at, ends_at, timezone,
+          registration_opens_at, registration_closes_at, music_deadline_at,
+          check_in_opens_at, check_in_closes_at
+        )
       `
       )
       .eq('id', division_id)
@@ -48,7 +53,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Division not found' }, { status: 404 })
     }
 
-    const event = division.event as unknown as { id: string; status: string }
+    const event = division.event as unknown as {
+      id: string
+      status: 'draft' | 'published' | 'active' | 'completed' | 'cancelled'
+      event_date: string | null
+      starts_at: string | null
+      ends_at: string | null
+      timezone: string | null
+      registration_opens_at: string | null
+      registration_closes_at: string | null
+      music_deadline_at: string | null
+      check_in_opens_at: string | null
+      check_in_closes_at: string | null
+    }
+
     if (!event || !['published', 'active'].includes(event.status)) {
       return NextResponse.json(
         { error: 'Registration is not currently open for this event' },
@@ -57,6 +75,17 @@ export async function POST(request: Request) {
     }
 
     if (action === 'register') {
+      const availability = getRegistrationAvailability(event)
+      if (!availability.open) {
+        return NextResponse.json(
+          {
+            error: 'Registration window is closed for this event',
+            reason: availability.reason,
+          },
+          { status: 403 }
+        )
+      }
+
       const { data: existing } = await supabaseAdmin
         .from('division_members')
         .select('id')

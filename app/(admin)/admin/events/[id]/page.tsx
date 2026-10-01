@@ -22,6 +22,7 @@ import DeleteEventButton from '@/components/admin/DeleteEventButton'
 import ScheduleManager from '@/components/admin/ScheduleManager'
 import FinalizeEventPanel from '@/components/admin/FinalizeEventPanel'
 import EventStaffPanel from '@/components/admin/EventStaffPanel'
+import { formatInTimeZone } from '@/lib/events/timing'
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
@@ -68,17 +69,20 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             Back to Events
           </Link>
           <h1 className="text-3xl font-bold">{event.name}</h1>
-          <div className="flex items-center gap-4 text-muted-foreground">
-            {event.event_date && (
+          <div className="flex items-center gap-4 text-muted-foreground flex-wrap">
+            {(event.starts_at || event.event_date) && (
               <span className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
-                {new Date(event.event_date).toLocaleDateString()}
+                {event.starts_at
+                  ? formatInTimeZone(event.starts_at, event.timezone || 'UTC')
+                  : new Date(event.event_date).toLocaleDateString()}
+                {event.timezone ? ` (${event.timezone})` : ''}
               </span>
             )}
-            {event.location && (
+            {(event.venue_name || event.location) && (
               <span className="flex items-center gap-1">
                 <MapPin className="h-4 w-4" />
-                {event.location}
+                {event.venue_name || event.location}
               </span>
             )}
           </div>

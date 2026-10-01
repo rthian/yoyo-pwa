@@ -153,6 +153,7 @@ Applied in order from `supabase/migrations/`:
 4. `004`–`010` — league rankings, profiles, races, field_scope, major deduction counts
 5. `011_competitors_identity.sql` — Slice A: `competitors` + `account_competitor_links` (accounts stay on `members`; no FK remaps yet)
 6. `012_event_staff_roles.sql` — Prompt 3: `event_staff_roles` + audit + capability helpers; APIs use `lib/auth/event-permissions.ts`
+7. `013_event_timing.sql` — Prompt 4: TIMESTAMPTZ windows, venue/address, keeps `event_date`
 
 ---
 

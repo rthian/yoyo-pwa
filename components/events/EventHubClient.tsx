@@ -68,8 +68,24 @@ interface HubPayload {
     event_date: string | null
     location: string | null
     status: string
+    timezone?: string | null
+    starts_at?: string | null
+    ends_at?: string | null
+    starts_at_local?: string | null
+    ends_at_local?: string | null
+    registration_opens_at_local?: string | null
+    registration_closes_at_local?: string | null
+    music_deadline_at_local?: string | null
+    venue_name?: string | null
+    website_url?: string | null
+    organizer_contact_public?: boolean | null
+    organizer_contact_name?: string | null
+    organizer_contact_email?: string | null
+    city?: string | null
+    region?: string | null
   }
   registrationOpen: boolean
+  registrationReason?: string
   authenticated: boolean
   divisions: HubDivision[]
   schedule: ScheduleItem[]
@@ -266,19 +282,57 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{event.description}</p>
               )}
               <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2 flex-wrap">
-                {event.event_date && (
+                {(event.starts_at_local || event.event_date) && (
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3.5 w-3.5" />
-                    {formatDate(event.event_date)}
+                    {event.starts_at_local
+                      ? `${event.starts_at_local}${event.timezone ? ` (${event.timezone})` : ''}`
+                      : formatDate(event.event_date!)}
+                    {event.ends_at_local ? ` – ${event.ends_at_local}` : ''}
                   </span>
                 )}
-                {event.location && (
+                {(event.venue_name || event.location || event.city) && (
                   <span className="flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5" />
-                    {event.location}
+                    {event.venue_name ||
+                      [event.location, event.city, event.region].filter(Boolean).join(', ')}
                   </span>
                 )}
               </div>
+              {(event.registration_opens_at_local ||
+                event.registration_closes_at_local ||
+                event.music_deadline_at_local) && (
+                <div className="text-xs text-muted-foreground mt-2 space-y-0.5">
+                  {event.registration_opens_at_local && (
+                    <p>Reg opens: {event.registration_opens_at_local}</p>
+                  )}
+                  {event.registration_closes_at_local && (
+                    <p>Reg closes: {event.registration_closes_at_local}</p>
+                  )}
+                  {event.music_deadline_at_local && (
+                    <p>Music deadline: {event.music_deadline_at_local}</p>
+                  )}
+                </div>
+              )}
+              {event.organizer_contact_public &&
+                (event.organizer_contact_name || event.organizer_contact_email) && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Contact:{' '}
+                    {[event.organizer_contact_name, event.organizer_contact_email]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                )}
+              {event.website_url && (
+                <a
+                  href={event.website_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-primary underline mt-1 inline-block"
+                >
+                  Event website
+                </a>
+              )}
             </div>
           </div>
         </div>

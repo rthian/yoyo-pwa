@@ -103,6 +103,26 @@ export interface Event {
   description: string | null
   location: string | null
   event_date: string | null
+  starts_at?: string | null
+  ends_at?: string | null
+  timezone?: string | null
+  registration_opens_at?: string | null
+  registration_closes_at?: string | null
+  music_deadline_at?: string | null
+  check_in_opens_at?: string | null
+  check_in_closes_at?: string | null
+  venue_name?: string | null
+  address_line1?: string | null
+  address_line2?: string | null
+  city?: string | null
+  region?: string | null
+  postal_code?: string | null
+  country_code?: string | null
+  website_url?: string | null
+  social_links?: Record<string, string> | null
+  organizer_contact_name?: string | null
+  organizer_contact_email?: string | null
+  organizer_contact_public?: boolean | null
   status: EventStatus
   ruleset_id: string | null
   season_id?: string | null

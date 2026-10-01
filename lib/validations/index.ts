@@ -3,6 +3,7 @@
  * Form validation schemas for the YoYo League system
  */
 import { z } from 'zod'
+import { validateEventTimingOrder } from '@/lib/events/timing'
 
 // Auth schemas
 export const loginSchema = z.object({
@@ -25,18 +26,51 @@ export const memberSchema = z.object({
 
 export type MemberFormData = z.infer<typeof memberSchema>
 
-// Event schemas — used by app/api/events/route.ts + EventForm
-export const eventSchema = z.object({
-  name: z.string().min(2, 'Event name must be at least 2 characters'),
-  description: z.string().optional(),
-  location: z.string().optional(),
-  event_date: z.string().optional(),
-  status: z.enum(['draft', 'published', 'active', 'completed', 'cancelled']),
-  ruleset_id: z.string().uuid('Invalid ruleset ID').optional().nullable(),
-  season_id: z.string().uuid().optional().nullable(),
-  tier_id: z.string().uuid().optional().nullable(),
-  geo_id: z.string().uuid().optional().nullable(),
-})
+// Event schemas — used by app/api/events + EventForm
+const optionalIso = z
+  .string()
+  .datetime({ offset: true })
+  .nullable()
+  .optional()
+
+export const eventSchema = z
+  .object({
+    name: z.string().min(2, 'Event name must be at least 2 characters'),
+    description: z.string().optional().nullable(),
+    location: z.string().optional().nullable(),
+    event_date: z.string().nullable().optional(),
+    starts_at: optionalIso,
+    ends_at: optionalIso,
+    timezone: z.string().min(1).max(64).optional().nullable(),
+    registration_opens_at: optionalIso,
+    registration_closes_at: optionalIso,
+    music_deadline_at: optionalIso,
+    check_in_opens_at: optionalIso,
+    check_in_closes_at: optionalIso,
+    venue_name: z.string().optional().nullable(),
+    address_line1: z.string().optional().nullable(),
+    address_line2: z.string().optional().nullable(),
+    city: z.string().optional().nullable(),
+    region: z.string().optional().nullable(),
+    postal_code: z.string().optional().nullable(),
+    country_code: z.string().length(2).nullable().optional(),
+    website_url: z.string().url('Must be a valid URL').nullable().optional(),
+    social_links: z.record(z.string(), z.string()).optional().nullable(),
+    organizer_contact_name: z.string().optional().nullable(),
+    organizer_contact_email: z.string().email().nullable().optional(),
+    organizer_contact_public: z.boolean().optional().nullable(),
+    status: z.enum(['draft', 'published', 'active', 'completed', 'cancelled']),
+    ruleset_id: z.string().uuid('Invalid ruleset ID').optional().nullable(),
+    season_id: z.string().uuid().optional().nullable(),
+    tier_id: z.string().uuid().optional().nullable(),
+    geo_id: z.string().uuid().optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    const err = validateEventTimingOrder(data)
+    if (err) {
+      ctx.addIssue({ code: 'custom', message: err, path: ['starts_at'] })
+    }
+  })
 
 export type EventFormData = z.infer<typeof eventSchema>
 
