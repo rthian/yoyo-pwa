@@ -13,6 +13,7 @@ import {
   majorDeductionPoints,
   type ScoringConfigLike,
 } from '@/lib/judge/score-math'
+import { writeScoreWithRevision } from '@/lib/scores/revisions'
 
 // Create or update a score
 export async function POST(request: Request) {
@@ -129,17 +130,23 @@ export async function POST(request: Request) {
     // Check if score already exists
     const { data: existingScore } = await supabaseAdmin
       .from('scores')
-      .select('id, is_submitted')
+      .select('*')
       .eq('division_member_id', scoreData.division_member_id)
       .eq('judge_id', user.id)
-      .single()
+      .maybeSingle()
 
     const isSubmit = body.is_submitted === true
 
-    // Prevent updating already-submitted scores
     if (existingScore?.is_submitted && !isSubmit) {
       return NextResponse.json(
         { error: 'Cannot modify an already submitted score' },
+        { status: 400 }
+      )
+    }
+
+    if (existingScore?.is_submitted && isSubmit && !body.reason) {
+      return NextResponse.json(
+        { error: 'Reason required when overwriting a submitted score' },
         { status: 400 }
       )
     }
@@ -156,35 +163,45 @@ export async function POST(request: Request) {
       performance_score: performance,
       total_score: total,
       is_submitted: isSubmit,
-      submitted_at: isSubmit ? now : null,
-      ...(existingScore && { updated_at: now }),
+      submitted_at: isSubmit ? now : existingScore?.submitted_at ?? null,
+      updated_at: now,
     }
 
-    let result
-    if (existingScore) {
-      // Update existing score
-      const { data, error } = await supabaseAdmin
-        .from('scores')
-        .update(finalScoreData)
-        .eq('id', existingScore.id)
-        .select()
-        .single()
+    const write = await writeScoreWithRevision(supabaseAdmin, {
+      actorId: user.id,
+      payload: finalScoreData,
+      existing: existingScore,
+      expectedVersion: body.expected_version ?? existingScore?.score_version ?? null,
+      clientSubmissionId: body.client_submission_id ?? null,
+      clientTimestamp: body.client_timestamp ?? null,
+      reason: body.reason ?? null,
+      source: 'online',
+      overwriteSubmitted: Boolean(body.reason),
+    })
 
-      if (error) throw error
-      result = data
-    } else {
-      // Create new score
-      const { data, error } = await supabaseAdmin
-        .from('scores')
-        .insert(finalScoreData)
-        .select()
-        .single()
-
-      if (error) throw error
-      result = data
+    if (write.outcome === 'conflict') {
+      return NextResponse.json(
+        { error: write.message, outcome: write.outcome, score: write.score },
+        { status: 409 }
+      )
+    }
+    if (write.outcome === 'duplicate') {
+      return NextResponse.json(
+        { score: write.score, outcome: write.outcome },
+        { status: 200 }
+      )
+    }
+    if (write.outcome !== 'accepted') {
+      return NextResponse.json(
+        { error: write.message, outcome: write.outcome },
+        { status: 400 }
+      )
     }
 
-    return NextResponse.json({ score: result }, { status: existingScore ? 200 : 201 })
+    return NextResponse.json(
+      { score: write.score, outcome: write.outcome, revisionId: write.revisionId },
+      { status: existingScore ? 200 : 201 }
+    )
   } catch (error) {
     console.error('Score API error:', error)
     return NextResponse.json(

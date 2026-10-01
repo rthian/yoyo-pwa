@@ -23,6 +23,7 @@ import ScheduleManager from '@/components/admin/ScheduleManager'
 import FinalizeEventPanel from '@/components/admin/FinalizeEventPanel'
 import EventStaffPanel from '@/components/admin/EventStaffPanel'
 import EventRegistrationsPanel from '@/components/admin/EventRegistrationsPanel'
+import EventTracksPanel from '@/components/admin/EventTracksPanel'
 import { formatInTimeZone } from '@/lib/events/timing'
 
 interface EventDetailPageProps {
@@ -145,6 +146,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       <Tabs defaultValue="divisions">
         <TabsList>
           <TabsTrigger value="divisions">Divisions</TabsTrigger>
+          <TabsTrigger value="tracks">Tracks</TabsTrigger>
           <TabsTrigger value="schedule">Schedule</TabsTrigger>
           <TabsTrigger value="registrations">Registrations</TabsTrigger>
           <TabsTrigger value="staff">Staff</TabsTrigger>
@@ -168,6 +170,20 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             </CardHeader>
             <CardContent>
               <DivisionsList divisions={divisions || []} eventId={id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tracks">
+          <Card>
+            <CardHeader>
+              <CardTitle>Competition tracks</CardTitle>
+              <CardDescription>
+                Group divisions as stages (Qualifier → Semi → Final). No automatic advancement.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EventTracksPanel eventId={id} />
             </CardContent>
           </Card>
         </TabsContent>

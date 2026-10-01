@@ -1,7 +1,5 @@
 /**
- * Offline Score Sync API
- * Handles syncing scores that were saved while offline
- * Uses admin client to bypass RLS for all DB queries
+ * Offline Score Sync API — durable client_submission_id + version outcomes.
  */
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -12,9 +10,12 @@ import {
   type ScoringConfigLike,
   type ScoreFields,
 } from '@/lib/judge/score-math'
+import { writeScoreWithRevision, type SyncOutcome } from '@/lib/scores/revisions'
 
 interface OfflineScore {
   clientId: string
+  clientSubmissionId?: string
+  expectedVersion?: number | null
   divisionId: string
   divisionMemberId: string
   scoreData: Record<string, number>
@@ -25,31 +26,32 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient()
     const supabaseAdmin = createAdminClient()
-    
-    const { data: { user } } = await supabase.auth.getUser()
-    
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { scores } = await request.json() as { scores: OfflineScore[] }
-    
+    const { scores } = (await request.json()) as { scores: OfflineScore[] }
+
     if (!Array.isArray(scores) || scores.length === 0) {
-      return NextResponse.json(
-        { error: 'No scores to sync' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'No scores to sync' }, { status: 400 })
     }
 
-    const results: { success: string[]; failed: string[] } = {
-      success: [],
-      failed: [],
-    }
+    const results: {
+      clientId: string
+      outcome: SyncOutcome
+      scoreVersion?: number
+      message?: string
+    }[] = []
 
     for (const offlineScore of scores) {
+      const clientSubmissionId =
+        offlineScore.clientSubmissionId || offlineScore.clientId
+
       try {
         const { data: assignment } = await supabaseAdmin
           .from('division_judges')
@@ -58,7 +60,11 @@ export async function POST(request: Request) {
           .eq('member_id', user.id)
           .maybeSingle()
         if (!assignment) {
-          results.failed.push(offlineScore.clientId)
+          results.push({
+            clientId: offlineScore.clientId,
+            outcome: 'unauthorized',
+            message: 'Not assigned',
+          })
           continue
         }
 
@@ -68,7 +74,11 @@ export async function POST(request: Request) {
           .eq('id', offlineScore.divisionId)
           .maybeSingle()
         if (!division || division.scoring_locked) {
-          results.failed.push(offlineScore.clientId)
+          results.push({
+            clientId: offlineScore.clientId,
+            outcome: 'locked',
+            message: 'Division locked',
+          })
           continue
         }
 
@@ -79,11 +89,14 @@ export async function POST(request: Request) {
           .eq('division_id', offlineScore.divisionId)
           .maybeSingle()
         if (!participant) {
-          results.failed.push(offlineScore.clientId)
+          results.push({
+            clientId: offlineScore.clientId,
+            outcome: 'invalid',
+            message: 'Participant not found',
+          })
           continue
         }
 
-        // Calculate totals (IYYF / AP / legacy via shared math)
         const { scoreData } = offlineScore
         const { data: divMeta } = await supabaseAdmin
           .from('divisions')
@@ -127,17 +140,13 @@ export async function POST(request: Request) {
           scoringConfig,
           divMeta?.round_type ?? 'final'
         )
-        const technical = computed.technical
-        const performance = computed.performance
-        const total = computed.total
 
-        // Check for existing score
         const { data: existing } = await supabaseAdmin
           .from('scores')
-          .select('id, updated_at')
+          .select('*')
           .eq('division_member_id', offlineScore.divisionMemberId)
           .eq('judge_id', user.id)
-          .single()
+          .maybeSingle()
 
         const finalData = {
           division_id: offlineScore.divisionId,
@@ -148,46 +157,61 @@ export async function POST(request: Request) {
           md_discard_count: fields.md_discard_count,
           md_detach_count: fields.md_detach_count,
           ex_deductions: fields.ex_deductions,
-          technical_score: technical,
-          performance_score: performance,
-          total_score: total,
+          technical_score: computed.technical,
+          performance_score: computed.performance,
+          total_score: computed.total,
           is_submitted: true,
-          submitted_at: new Date(offlineScore.timestamp).toISOString(),
+          submitted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         }
 
-        if (existing) {
-          // Only update if offline version is newer
-          const existingTime = new Date(existing.updated_at).getTime()
-          if (offlineScore.timestamp > existingTime) {
-            await supabaseAdmin
-              .from('scores')
-              .update(finalData)
-              .eq('id', existing.id)
-          }
-        } else {
-          await supabaseAdmin
-            .from('scores')
-            .insert(finalData)
-        }
+        const write = await writeScoreWithRevision(supabaseAdmin, {
+          actorId: user.id,
+          payload: finalData,
+          existing,
+          expectedVersion:
+            offlineScore.expectedVersion ?? existing?.score_version ?? null,
+          clientSubmissionId,
+          clientTimestamp: new Date(offlineScore.timestamp).toISOString(),
+          reason: existing?.is_submitted ? 'offline sync overwrite' : null,
+          source: 'offline_sync',
+          overwriteSubmitted: true,
+        })
 
-        results.success.push(offlineScore.clientId)
+        results.push({
+          clientId: offlineScore.clientId,
+          outcome: write.outcome,
+          scoreVersion:
+            write.outcome === 'accepted'
+              ? (write.score.score_version as number)
+              : existing?.score_version,
+          message: write.outcome === 'accepted' ? undefined : write.message,
+        })
       } catch (err) {
         console.error('Failed to sync score:', offlineScore.clientId, err)
-        results.failed.push(offlineScore.clientId)
+        results.push({
+          clientId: offlineScore.clientId,
+          outcome: 'invalid',
+          message: err instanceof Error ? err.message : 'sync error',
+        })
       }
     }
 
+    const accepted = results.filter((r) =>
+      ['accepted', 'duplicate'].includes(r.outcome)
+    )
+    const failed = results.filter(
+      (r) => !['accepted', 'duplicate'].includes(r.outcome)
+    )
+
     return NextResponse.json({
       message: 'Sync complete',
-      synced: results.success.length,
-      failed: results.failed.length,
+      synced: accepted.length,
+      failed: failed.length,
       results,
     })
   } catch (error) {
     console.error('Sync API error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

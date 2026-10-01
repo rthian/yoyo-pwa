@@ -155,6 +155,9 @@ Applied in order from `supabase/migrations/`:
 6. `012_event_staff_roles.sql` — Prompt 3: `event_staff_roles` + audit + capability helpers; APIs use `lib/auth/event-permissions.ts`
 7. `013_event_timing.sql` — Prompt 4: TIMESTAMPTZ windows, venue/address, keeps `event_date`
 8. `014_registrations.sql` — Prompt 5: registrations + entries + audit; sync confirmed → division_members; capacity/waitlist
+9. `015_competition_tracks.sql` — Prompt 6: tracks/stages; advancement decisions (no auto-advance)
+10. `016_score_revisions_idempotency.sql` — Prompt 7–8: score_revisions + score_version + client_submission_id
+11. `017_music_submissions.sql` — Prompt 10: music requirements/submissions/versions (private bucket `competition-music`)
 
 ---
 

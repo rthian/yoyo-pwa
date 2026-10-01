@@ -208,6 +208,9 @@ export interface Division {
   field_scope?: 'championship' | 'invitational' | null
   capacity?: number | null
   waitlist_enabled?: boolean
+  track_id?: string | null
+  stage_order?: number
+  allow_direct_entry?: boolean
   created_at: string
   updated_at: string
 }
