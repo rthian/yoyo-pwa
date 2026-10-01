@@ -1,46 +1,21 @@
 /**
- * Divisions API Route
- * Handles division creation
+ * Divisions API Route — create division (manage_divisions on event).
  */
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 import { divisionSchema } from '@/lib/validations'
+import {
+  getAuthedAdminClient,
+  requireEventCapabilityResponse,
+} from '@/lib/auth/request'
 
-// Create new division
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
-    const supabaseAdmin = createAdminClient()
-    
-    // Check if current user is admin
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const auth = await getAuthedAdminClient()
+    if (!auth.ok) return auth.error
 
-    // Use admin client to check role
-    const { data: currentMember } = await supabaseAdmin
-      .from('members')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (currentMember?.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Only admins can create divisions' },
-        { status: 403 }
-      )
-    }
-
-    // Validate division data
     const body = await request.json()
     const validationResult = divisionSchema.safeParse(body)
-    
+
     if (!validationResult.success) {
       return NextResponse.json(
         { error: 'Invalid data', details: validationResult.error.flatten() },
@@ -48,26 +23,27 @@ export async function POST(request: Request) {
       )
     }
 
-    // Create division using admin client
-    const { data: division, error } = await supabaseAdmin
+    const denied = await requireEventCapabilityResponse(
+      auth.supabaseAdmin,
+      auth.user.id,
+      validationResult.data.event_id,
+      'manage_divisions'
+    )
+    if (denied) return denied
+
+    const { data: division, error } = await auth.supabaseAdmin
       .from('divisions')
       .insert(validationResult.data)
       .select()
       .single()
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     return NextResponse.json({ division }, { status: 201 })
   } catch (error) {
     console.error('Division creation error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

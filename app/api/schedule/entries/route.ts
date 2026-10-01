@@ -1,39 +1,17 @@
 /**
- * Schedule Entries API Route
- * Handles creation of schedule entries (ceremonies, breaks, etc.)
+ * Schedule Entries API — create (manage_schedule).
  */
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 import { scheduleEntrySchema } from '@/lib/validations'
+import {
+  getAuthedAdminClient,
+  requireEventCapabilityResponse,
+} from '@/lib/auth/request'
 
-// Create a new schedule entry (admin only)
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
-    const supabaseAdmin = createAdminClient()
-
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const { data: currentMember } = await supabaseAdmin
-      .from('members')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (currentMember?.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Only admins can create schedule entries' },
-        { status: 403 }
-      )
-    }
+    const auth = await getAuthedAdminClient()
+    if (!auth.ok) return auth.error
 
     const body = await request.json()
     const validationResult = scheduleEntrySchema.safeParse(body)
@@ -45,25 +23,27 @@ export async function POST(request: Request) {
       )
     }
 
-    const { data: entry, error } = await supabaseAdmin
+    const denied = await requireEventCapabilityResponse(
+      auth.supabaseAdmin,
+      auth.user.id,
+      validationResult.data.event_id,
+      'manage_schedule'
+    )
+    if (denied) return denied
+
+    const { data: entry, error } = await auth.supabaseAdmin
       .from('schedule_entries')
       .insert(validationResult.data)
       .select()
       .single()
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     return NextResponse.json({ entry }, { status: 201 })
   } catch (error) {
     console.error('Schedule entry creation error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

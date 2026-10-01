@@ -135,6 +135,22 @@ export const rulesetSchema = z.object({
 
 export type RulesetFormData = z.infer<typeof rulesetSchema>
 
+export const eventStaffGrantSchema = z.object({
+  account_id: z.string().uuid(),
+  role: z.enum([
+    'owner',
+    'organizer',
+    'registration_manager',
+    'music_manager',
+    'head_judge',
+    'stage_manager',
+    'readonly_staff',
+  ]),
+  note: z.string().max(500).optional().nullable(),
+})
+
+export type EventStaffGrantData = z.infer<typeof eventStaffGrantSchema>
+
 // Schedule entry schemas
 export const scheduleEntrySchema = z.object({
   event_id: z.string().uuid('Invalid event ID'),

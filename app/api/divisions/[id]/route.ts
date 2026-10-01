@@ -1,51 +1,40 @@
 /**
- * Division Detail API Route
- * Handles division updates and deletion
+ * Division Detail API Route — update/delete (manage_divisions).
  */
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 import { divisionSchema } from '@/lib/validations'
+import {
+  getAuthedAdminClient,
+  requireEventCapabilityResponse,
+} from '@/lib/auth/request'
+import { resolveEventIdForDivision } from '@/lib/auth/event-permissions'
 
 interface RouteParams {
   params: Promise<{ id: string }>
 }
 
-// Update division
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params
-    const supabase = await createClient()
-    const supabaseAdmin = createAdminClient()
-    
-    // Check if current user is admin
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const auth = await getAuthedAdminClient()
+    if (!auth.ok) return auth.error
+
+    const eventId = await resolveEventIdForDivision(auth.supabaseAdmin, id)
+    if (!eventId) {
+      return NextResponse.json({ error: 'Division not found' }, { status: 404 })
     }
 
-    // Use admin client to check role
-    const { data: currentMember } = await supabaseAdmin
-      .from('members')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    const denied = await requireEventCapabilityResponse(
+      auth.supabaseAdmin,
+      auth.user.id,
+      eventId,
+      'manage_divisions'
+    )
+    if (denied) return denied
 
-    if (currentMember?.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Only admins can update divisions' },
-        { status: 403 }
-      )
-    }
-
-    // Validate division data
     const body = await request.json()
     const validationResult = divisionSchema.safeParse(body)
-    
+
     if (!validationResult.success) {
       return NextResponse.json(
         { error: 'Invalid data', details: validationResult.error.flatten() },
@@ -53,8 +42,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       )
     }
 
-    // Update division using admin client
-    const { data: division, error } = await supabaseAdmin
+    const { data: division, error } = await auth.supabaseAdmin
       .from('divisions')
       .update(validationResult.data)
       .eq('id', id)
@@ -62,72 +50,44 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       .single()
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     return NextResponse.json({ division })
   } catch (error) {
     console.error('Division update error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-// Delete division
-export async function DELETE(request: Request, { params }: RouteParams) {
+export async function DELETE(_request: Request, { params }: RouteParams) {
   try {
     const { id } = await params
-    const supabase = await createClient()
-    const supabaseAdmin = createAdminClient()
-    
-    // Check if current user is admin
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const auth = await getAuthedAdminClient()
+    if (!auth.ok) return auth.error
+
+    const eventId = await resolveEventIdForDivision(auth.supabaseAdmin, id)
+    if (!eventId) {
+      return NextResponse.json({ error: 'Division not found' }, { status: 404 })
     }
 
-    // Use admin client to check role
-    const { data: currentMember } = await supabaseAdmin
-      .from('members')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    const denied = await requireEventCapabilityResponse(
+      auth.supabaseAdmin,
+      auth.user.id,
+      eventId,
+      'manage_divisions'
+    )
+    if (denied) return denied
 
-    if (currentMember?.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Only admins can delete divisions' },
-        { status: 403 }
-      )
-    }
-
-    // Delete division using admin client
-    const { error } = await supabaseAdmin
-      .from('divisions')
-      .delete()
-      .eq('id', id)
+    const { error } = await auth.supabaseAdmin.from('divisions').delete().eq('id', id)
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Division deletion error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

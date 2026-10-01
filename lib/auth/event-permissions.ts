@@ -123,8 +123,23 @@ export async function hasEventCapability(
   return roles.some((r) => allowed.includes(r))
 }
 
+async function isDivisionHeadJudge(
+  supabase: SupabaseClient,
+  accountId: string,
+  divisionId: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('division_judges')
+    .select('judge_type')
+    .eq('division_id', divisionId)
+    .eq('member_id', accountId)
+    .maybeSingle()
+
+  return data?.judge_type === 'head'
+}
+
 /**
- * Lock / visualiser / triage: event head_judge OR division head assignment OR admin.
+ * Lock / triage mutate: event lock_scores OR division head assignment OR admin.
  */
 export async function canLockDivisionScores(
   supabase: SupabaseClient,
@@ -135,15 +150,22 @@ export async function canLockDivisionScores(
   if (await hasEventCapability(supabase, accountId, eventId, 'lock_scores')) {
     return true
   }
+  return isDivisionHeadJudge(supabase, accountId, divisionId)
+}
 
-  const { data } = await supabase
-    .from('division_judges')
-    .select('judge_type')
-    .eq('division_id', divisionId)
-    .eq('member_id', accountId)
-    .maybeSingle()
-
-  return data?.judge_type === 'head'
+/**
+ * Visualiser / ops read: view_ops staff OR division head OR admin.
+ */
+export async function canViewDivisionOps(
+  supabase: SupabaseClient,
+  accountId: string,
+  eventId: string,
+  divisionId: string
+): Promise<boolean> {
+  if (await hasEventCapability(supabase, accountId, eventId, 'view_ops')) {
+    return true
+  }
+  return isDivisionHeadJudge(supabase, accountId, divisionId)
 }
 
 export async function assertEventCapability(

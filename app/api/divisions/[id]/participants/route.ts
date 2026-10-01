@@ -1,40 +1,46 @@
 /**
- * Division Participants API Routes
- * Handles CRUD for division participants (bypasses RLS)
+ * Division Participants API — enroll / order / status (event staff capabilities).
  */
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
+import { getAuthedAdminClient, requireEventCapabilityResponse } from '@/lib/auth/request'
+import { resolveEventIdForDivision } from '@/lib/auth/event-permissions'
+import type { EventCapability } from '@/lib/types/database'
 
-async function checkAdmin() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+async function requireDivisionCapability(
+  capability: EventCapability,
+  divisionId: string
+) {
+  const auth = await getAuthedAdminClient()
+  if (!auth.ok) return { error: auth.error }
 
-  const supabaseAdmin = createAdminClient()
-  const { data: member } = await supabaseAdmin
-    .from('members')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+  const eventId = await resolveEventIdForDivision(auth.supabaseAdmin, divisionId)
+  if (!eventId) {
+    return {
+      error: NextResponse.json({ error: 'Division not found' }, { status: 404 }),
+    }
+  }
 
-  return member?.role === 'admin' ? user : null
+  const denied = await requireEventCapabilityResponse(
+    auth.supabaseAdmin,
+    auth.user.id,
+    eventId,
+    capability
+  )
+  if (denied) return { error: denied }
+
+  return { user: auth.user, supabaseAdmin: auth.supabaseAdmin, eventId }
 }
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await checkAdmin()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const { id: divisionId } = await params
-    const supabaseAdmin = createAdminClient()
+    const auth = await requireDivisionCapability('view_ops', divisionId)
+    if ('error' in auth) return auth.error
 
-    const { data: participants, error } = await supabaseAdmin
+    const { data: participants, error } = await auth.supabaseAdmin
       .from('division_members')
       .select(`
         *,
@@ -47,10 +53,10 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Get available members (not in this division, role=member)
-    const participantIds = participants?.map((p: { member_id: string }) => p.member_id) || []
-    
-    const query = supabaseAdmin
+    const participantIds =
+      participants?.map((p: { member_id: string }) => p.member_id) || []
+
+    const query = auth.supabaseAdmin
       .from('members')
       .select('*')
       .eq('is_active', true)
@@ -63,7 +69,10 @@ export async function GET(
 
     const { data: availableMembers } = await query
 
-    return NextResponse.json({ participants: participants || [], availableMembers: availableMembers || [] })
+    return NextResponse.json({
+      participants: participants || [],
+      availableMembers: availableMembers || [],
+    })
   } catch (error) {
     console.error('Error fetching participants:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -75,16 +84,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await checkAdmin()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const { id: divisionId } = await params
-    const body = await request.json()
-    const supabaseAdmin = createAdminClient()
+    const auth = await requireDivisionCapability('manage_registration', divisionId)
+    if ('error' in auth) return auth.error
 
-    const { data, error } = await supabaseAdmin
+    const body = await request.json()
+
+    const { data, error } = await auth.supabaseAdmin
       .from('division_members')
       .insert({
         division_id: divisionId,
@@ -107,19 +113,24 @@ export async function POST(
 
 export async function PATCH(
   request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await checkAdmin()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
+    const { id: divisionId } = await params
     const body = await request.json()
-    const supabaseAdmin = createAdminClient()
+
+    const capability: EventCapability = Array.isArray(body.participantIds)
+      ? 'manage_play_order'
+      : body.status === 'checked_in'
+        ? 'check_in'
+        : 'manage_registration'
+
+    const auth = await requireDivisionCapability(capability, divisionId)
+    if ('error' in auth) return auth.error
 
     if (Array.isArray(body.participantIds)) {
       for (let i = 0; i < body.participantIds.length; i++) {
-        const { error } = await supabaseAdmin
+        const { error } = await auth.supabaseAdmin
           .from('division_members')
           .update({ play_order: i + 1 })
           .eq('id', body.participantIds[i])
@@ -131,7 +142,7 @@ export async function PATCH(
       return NextResponse.json({ success: true })
     }
 
-    const { error } = await supabaseAdmin
+    const { error } = await auth.supabaseAdmin
       .from('division_members')
       .update({ status: body.status })
       .eq('id', body.participantId)
@@ -149,17 +160,16 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await checkAdmin()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { id: divisionId } = await params
+    const auth = await requireDivisionCapability('manage_registration', divisionId)
+    if ('error' in auth) return auth.error
 
     const body = await request.json()
-    const supabaseAdmin = createAdminClient()
 
-    const { error } = await supabaseAdmin
+    const { error } = await auth.supabaseAdmin
       .from('division_members')
       .delete()
       .eq('id', body.participantId)
