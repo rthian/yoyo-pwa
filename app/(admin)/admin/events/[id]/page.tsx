@@ -22,6 +22,7 @@ import DeleteEventButton from '@/components/admin/DeleteEventButton'
 import ScheduleManager from '@/components/admin/ScheduleManager'
 import FinalizeEventPanel from '@/components/admin/FinalizeEventPanel'
 import EventStaffPanel from '@/components/admin/EventStaffPanel'
+import EventRegistrationsPanel from '@/components/admin/EventRegistrationsPanel'
 import { formatInTimeZone } from '@/lib/events/timing'
 
 interface EventDetailPageProps {
@@ -145,6 +146,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         <TabsList>
           <TabsTrigger value="divisions">Divisions</TabsTrigger>
           <TabsTrigger value="schedule">Schedule</TabsTrigger>
+          <TabsTrigger value="registrations">Registrations</TabsTrigger>
           <TabsTrigger value="staff">Staff</TabsTrigger>
         </TabsList>
 
@@ -180,6 +182,20 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             </CardHeader>
             <CardContent>
               <ScheduleManager eventId={id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="registrations">
+          <Card>
+            <CardHeader>
+              <CardTitle>Registrations</CardTitle>
+              <CardDescription>
+                Event registration aggregate — confirm, waitlist, cancel, CSV export
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EventRegistrationsPanel eventId={id} />
             </CardContent>
           </Card>
         </TabsContent>

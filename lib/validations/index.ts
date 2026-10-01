@@ -91,6 +91,8 @@ export const divisionSchema = z.object({
   category_id: z.string().uuid().optional().nullable(),
   eligibility: z.enum(['open', 'women', 'youth', 'masters']).optional().nullable(),
   field_scope: z.enum(['championship', 'invitational']).optional().nullable(),
+  capacity: z.number().int().positive().nullable().optional(),
+  waitlist_enabled: z.boolean().optional(),
 })
 
 export type DivisionFormData = z.infer<typeof divisionSchema>

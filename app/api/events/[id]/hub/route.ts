@@ -56,7 +56,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const { data: divisions, error: divError } = await admin
       .from('divisions')
       .select(
-        'id, name, description, scoring_type, round_type, scheduled_start, scheduled_end, venue, sort_order, scoring_locked, is_active'
+        'id, name, description, scoring_type, round_type, scheduled_start, scheduled_end, venue, sort_order, scoring_locked, is_active, capacity, waitlist_enabled'
       )
       .eq('event_id', eventId)
       .eq('is_active', true)

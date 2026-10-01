@@ -37,13 +37,13 @@ interface HubDivision {
   description: string | null
   scoring_type: string
   round_type: string | null
-  max_participants: number | null
   scheduled_start: string | null
   scheduled_end: string | null
   venue: string | null
   scoring_locked: boolean
   is_registered: boolean
   participant_count: number
+  capacity?: number | null
 }
 
 interface ScheduleItem {
@@ -392,7 +392,7 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
                           <span className="flex items-center gap-1">
                             <Users className="h-3 w-3" />
                             {division.participant_count}
-                            {division.max_participants && ` / ${division.max_participants}`}
+                            {division.capacity && ` / ${division.capacity}`}
                           </span>
                           {division.scheduled_start && (
                             <span className="flex items-center gap-1">

@@ -15,6 +15,39 @@ export type CompetitorRelationship = 'self' | 'guardian' | 'manager' | 'coach'
 export type CompetitorCapability = 'any' | 'register' | 'music' | 'profile'
 export type ProfileVisibility = 'public' | 'members_only' | 'private'
 
+/** Prompt 5 registration aggregate */
+export type RegistrationStatus =
+  | 'draft'
+  | 'pending'
+  | 'confirmed'
+  | 'waitlisted'
+  | 'cancelled'
+  | 'rejected'
+  | 'checked_in'
+
+export type EligibilityStatus =
+  | 'not_reviewed'
+  | 'pending'
+  | 'eligible'
+  | 'ineligible'
+  | 'needs_info'
+
+export type PaymentStatusPlaceholder =
+  | 'not_required'
+  | 'unpaid'
+  | 'pending'
+  | 'paid'
+  | 'waived'
+  | 'refunded'
+
+export type WaiverStatusPlaceholder =
+  | 'not_required'
+  | 'pending'
+  | 'signed'
+  | 'declined'
+
+export type RegistrationEntryStatus = RegistrationStatus
+
 /** Prompt 3: event-scoped staff roles (accounts, not competitors) */
 export type EventStaffRole =
   | 'owner'
@@ -173,8 +206,49 @@ export interface Division {
   category_id?: string | null
   eligibility?: 'open' | 'women' | 'youth' | 'masters' | null
   field_scope?: 'championship' | 'invitational' | null
+  capacity?: number | null
+  waitlist_enabled?: boolean
   created_at: string
   updated_at: string
+}
+
+export interface Registration {
+  id: string
+  event_id: string
+  competitor_id: string
+  submitted_by_account_id: string | null
+  status: RegistrationStatus
+  eligibility_status: EligibilityStatus
+  payment_status: PaymentStatusPlaceholder
+  waiver_status: WaiverStatusPlaceholder
+  cancelled_at: string | null
+  cancellation_reason: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RegistrationEntry {
+  id: string
+  registration_id: string
+  division_id: string
+  status: RegistrationEntryStatus
+  waitlist_position: number | null
+  division_member_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RegistrationAuditEvent {
+  id: string
+  registration_id: string
+  registration_entry_id: string | null
+  actor_account_id: string | null
+  action: string
+  from_status: string | null
+  to_status: string | null
+  detail: Record<string, unknown>
+  created_at: string
 }
 
 export interface DivisionMember {
