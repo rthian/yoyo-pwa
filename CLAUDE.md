@@ -152,6 +152,7 @@ Applied in order from `supabase/migrations/`:
 3. `003_judge_included_and_shadow.sql` — adds `scores_included_in_leaderboard` to `division_judges`; extends `judge_type` with `shadow`
 4. `004`–`010` — league rankings, profiles, races, field_scope, major deduction counts
 5. `011_competitors_identity.sql` — Slice A: `competitors` + `account_competitor_links` (accounts stay on `members`; no FK remaps yet)
+6. `012_event_staff_roles.sql` — Prompt 3 Slice 1: `event_staff_roles` + audit + capability helpers (APIs not wired yet)
 
 ---
 

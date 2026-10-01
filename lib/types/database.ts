@@ -15,6 +15,37 @@ export type CompetitorRelationship = 'self' | 'guardian' | 'manager' | 'coach'
 export type CompetitorCapability = 'any' | 'register' | 'music' | 'profile'
 export type ProfileVisibility = 'public' | 'members_only' | 'private'
 
+/** Prompt 3: event-scoped staff roles (accounts, not competitors) */
+export type EventStaffRole =
+  | 'owner'
+  | 'organizer'
+  | 'registration_manager'
+  | 'music_manager'
+  | 'head_judge'
+  | 'stage_manager'
+  | 'readonly_staff'
+
+export type EventCapability =
+  | 'manage_event'
+  | 'manage_staff'
+  | 'delete_event'
+  | 'cancel_event'
+  | 'manage_divisions'
+  | 'assign_judges'
+  | 'manage_registration'
+  | 'manage_music'
+  | 'manage_schedule'
+  | 'manage_play_order'
+  | 'check_in'
+  | 'lock_scores'
+  | 'view_ops'
+  | 'finalize_results'
+  | 'unfinalize_results'
+  | 'publish_results'
+  | 'manage_leaderboard_tokens'
+
+export type EventStaffRoleAuditAction = 'grant' | 'revoke'
+
 export interface Member {
   id: string
   email: string
@@ -80,6 +111,29 @@ export interface Event {
   created_by: string | null
   created_at: string
   updated_at: string
+}
+
+export interface EventStaffRoleRow {
+  id: string
+  event_id: string
+  account_id: string
+  role: EventStaffRole
+  granted_by: string | null
+  granted_at: string
+  revoked_at: string | null
+  revoked_by: string | null
+  created_at: string
+}
+
+export interface EventStaffRoleAudit {
+  id: string
+  event_id: string
+  account_id: string
+  role: EventStaffRole
+  action: EventStaffRoleAuditAction
+  actor_id: string | null
+  note: string | null
+  created_at: string
 }
 
 export interface Division {
