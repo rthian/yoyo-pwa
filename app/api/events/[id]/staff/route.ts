@@ -10,6 +10,7 @@ import {
 } from '@/lib/auth/request'
 import {
   grantEventRole,
+  hasEventCapability,
   listEventStaff,
   revokeEventRole,
 } from '@/lib/auth/event-permissions'
@@ -35,7 +36,47 @@ export async function GET(_request: Request, { params }: RouteParams) {
     if (denied) return denied
 
     const staff = await listEventStaff(auth.supabaseAdmin, eventId)
-    return NextResponse.json({ staff })
+    const accountIds = [...new Set(staff.map((s) => s.account_id))]
+
+    const { data: accounts } = accountIds.length
+      ? await auth.supabaseAdmin
+          .from('members')
+          .select('id, full_name, email, role')
+          .in('id', accountIds)
+      : { data: [] as { id: string; full_name: string; email: string; role: string }[] }
+
+    const accountById = new Map((accounts ?? []).map((m) => [m.id, m]))
+
+    const staffWithAccounts = staff.map((row) => ({
+      ...row,
+      account: accountById.get(row.account_id) ?? null,
+    }))
+
+    const { data: availableMembers } = await auth.supabaseAdmin
+      .from('members')
+      .select('id, full_name, email, role')
+      .eq('is_active', true)
+      .order('full_name', { ascending: true })
+
+    const canManage = await hasEventCapability(
+      auth.supabaseAdmin,
+      auth.user.id,
+      eventId,
+      'manage_staff'
+    )
+
+    const { data: actor } = await auth.supabaseAdmin
+      .from('members')
+      .select('role')
+      .eq('id', auth.user.id)
+      .maybeSingle()
+
+    return NextResponse.json({
+      staff: staffWithAccounts,
+      availableMembers: availableMembers ?? [],
+      canManageStaff: canManage,
+      isGlobalAdmin: actor?.role === 'admin',
+    })
   } catch (error) {
     console.error('Event staff list error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

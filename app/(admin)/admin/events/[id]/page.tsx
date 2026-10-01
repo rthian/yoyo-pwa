@@ -21,6 +21,7 @@ import EventStatusActions from '@/components/admin/EventStatusActions'
 import DeleteEventButton from '@/components/admin/DeleteEventButton'
 import ScheduleManager from '@/components/admin/ScheduleManager'
 import FinalizeEventPanel from '@/components/admin/FinalizeEventPanel'
+import EventStaffPanel from '@/components/admin/EventStaffPanel'
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
@@ -140,6 +141,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         <TabsList>
           <TabsTrigger value="divisions">Divisions</TabsTrigger>
           <TabsTrigger value="schedule">Schedule</TabsTrigger>
+          <TabsTrigger value="staff">Staff</TabsTrigger>
         </TabsList>
 
         <TabsContent value="divisions">
@@ -174,6 +176,20 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             </CardHeader>
             <CardContent>
               <ScheduleManager eventId={id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="staff">
+          <Card>
+            <CardHeader>
+              <CardTitle>Event staff</CardTitle>
+              <CardDescription>
+                Grant organizer, registration, music, head judge, and other event-scoped roles
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EventStaffPanel eventId={id} />
             </CardContent>
           </Card>
         </TabsContent>
