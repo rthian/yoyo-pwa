@@ -21,13 +21,30 @@ import EventStatusActions from '@/components/admin/EventStatusActions'
 import DeleteEventButton from '@/components/admin/DeleteEventButton'
 import ScheduleManager from '@/components/admin/ScheduleManager'
 import FinalizeEventPanel from '@/components/admin/FinalizeEventPanel'
+import EventStaffPanel from '@/components/admin/EventStaffPanel'
+import EventRegistrationsPanel from '@/components/admin/EventRegistrationsPanel'
+import EventTracksPanel from '@/components/admin/EventTracksPanel'
+import EventMusicOpsPanel from '@/components/admin/EventMusicOpsPanel'
+import { formatInTimeZone } from '@/lib/events/timing'
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ tab?: string }>
 }
 
-export default async function EventDetailPage({ params }: EventDetailPageProps) {
+export default async function EventDetailPage({ params, searchParams }: EventDetailPageProps) {
   const { id } = await params
+  const { tab: tabParam } = await searchParams
+  const allowedTabs = new Set([
+    'divisions',
+    'tracks',
+    'music',
+    'schedule',
+    'registrations',
+    'staff',
+  ])
+  const defaultTab =
+    tabParam && allowedTabs.has(tabParam) ? tabParam : 'divisions'
   const { createAdminClient } = await import('@/lib/supabase/admin')
   const supabase = createAdminClient()
 
@@ -67,17 +84,20 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             Back to Events
           </Link>
           <h1 className="text-3xl font-bold">{event.name}</h1>
-          <div className="flex items-center gap-4 text-muted-foreground">
-            {event.event_date && (
+          <div className="flex items-center gap-4 text-muted-foreground flex-wrap">
+            {(event.starts_at || event.event_date) && (
               <span className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
-                {new Date(event.event_date).toLocaleDateString()}
+                {event.starts_at
+                  ? formatInTimeZone(event.starts_at, event.timezone || 'UTC')
+                  : new Date(event.event_date).toLocaleDateString()}
+                {event.timezone ? ` (${event.timezone})` : ''}
               </span>
             )}
-            {event.location && (
+            {(event.venue_name || event.location) && (
               <span className="flex items-center gap-1">
                 <MapPin className="h-4 w-4" />
-                {event.location}
+                {event.venue_name || event.location}
               </span>
             )}
           </div>
@@ -136,10 +156,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       <FinalizeEventPanel eventId={id} />
 
       {/* Divisions & Schedule Tabs */}
-      <Tabs defaultValue="divisions">
+      <Tabs defaultValue={defaultTab}>
         <TabsList>
           <TabsTrigger value="divisions">Divisions</TabsTrigger>
+          <TabsTrigger value="tracks">Tracks</TabsTrigger>
+          <TabsTrigger value="music">Music ops</TabsTrigger>
           <TabsTrigger value="schedule">Schedule</TabsTrigger>
+          <TabsTrigger value="registrations">Registrations</TabsTrigger>
+          <TabsTrigger value="staff">Staff</TabsTrigger>
         </TabsList>
 
         <TabsContent value="divisions">
@@ -164,6 +188,34 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </Card>
         </TabsContent>
 
+        <TabsContent value="tracks">
+          <Card>
+            <CardHeader>
+              <CardTitle>Competition tracks</CardTitle>
+              <CardDescription>
+                Group divisions as stages (Qualifier → Semi → Final). No automatic advancement.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EventTracksPanel eventId={id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="music">
+          <Card>
+            <CardHeader>
+              <CardTitle>Stage music operations</CardTitle>
+              <CardDescription>
+                Readiness by stage, running order, offline preflight cache, emergency replace
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EventMusicOpsPanel eventId={id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="schedule">
           <Card>
             <CardHeader>
@@ -174,6 +226,34 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             </CardHeader>
             <CardContent>
               <ScheduleManager eventId={id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="registrations">
+          <Card>
+            <CardHeader>
+              <CardTitle>Registrations</CardTitle>
+              <CardDescription>
+                Event registration aggregate — confirm, waitlist, cancel, CSV export
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EventRegistrationsPanel eventId={id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="staff">
+          <Card>
+            <CardHeader>
+              <CardTitle>Event staff</CardTitle>
+              <CardDescription>
+                Grant organizer, registration, music, head judge, and other event-scoped roles
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EventStaffPanel eventId={id} />
             </CardContent>
           </Card>
         </TabsContent>

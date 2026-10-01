@@ -5,7 +5,6 @@
  * Writes ranking_points rows; may set events.status='completed'. Dates: event_date YYYY-MM-DD.
  * User: "yes please"
  */
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
   finalizeEventPoints,
@@ -19,29 +18,13 @@ import {
 } from '@/lib/utils/judge-analytics'
 import type { VisualiserScore } from '@/lib/types/visualiser'
 import { NextResponse } from 'next/server'
+import {
+  getAuthedAdminClient,
+  requireEventCapabilityResponse,
+} from '@/lib/auth/request'
 
 interface RouteParams {
   params: Promise<{ id: string }>
-}
-
-async function requireAdmin() {
-  const supabase = await createClient()
-  const supabaseAdmin = createAdminClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-
-  const { data: member } = await supabaseAdmin
-    .from('members')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (member?.role !== 'admin') {
-    return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  }
-  return { supabaseAdmin }
 }
 
 async function gatherFinalizeSoftFacts(
@@ -134,16 +117,24 @@ async function gatherFinalizeSoftFacts(
 export async function GET(_request: Request, { params }: RouteParams) {
   try {
     const { id } = await params
-    const auth = await requireAdmin()
-    if ('error' in auth && auth.error) return auth.error
+    const auth = await getAuthedAdminClient()
+    if (!auth.ok) return auth.error
 
-    const blockers = await getFinalizeBlockers(auth.supabaseAdmin!, id)
-    const { count } = await auth.supabaseAdmin!
+    const denied = await requireEventCapabilityResponse(
+      auth.supabaseAdmin,
+      auth.user.id,
+      id,
+      'finalize_results'
+    )
+    if (denied) return denied
+
+    const blockers = await getFinalizeBlockers(auth.supabaseAdmin, id)
+    const { count } = await auth.supabaseAdmin
       .from('ranking_points')
       .select('*', { count: 'exact', head: true })
       .eq('event_id', id)
 
-    const soft = await gatherFinalizeSoftFacts(auth.supabaseAdmin!, id, blockers).catch(
+    const soft = await gatherFinalizeSoftFacts(auth.supabaseAdmin, id, blockers).catch(
       (err) => {
         console.error('Finalize soft cue failed:', err)
         return null
@@ -175,10 +166,18 @@ export async function GET(_request: Request, { params }: RouteParams) {
 export async function POST(_request: Request, { params }: RouteParams) {
   try {
     const { id } = await params
-    const auth = await requireAdmin()
-    if ('error' in auth && auth.error) return auth.error
+    const auth = await getAuthedAdminClient()
+    if (!auth.ok) return auth.error
 
-    const result = await finalizeEventPoints(auth.supabaseAdmin!, id)
+    const denied = await requireEventCapabilityResponse(
+      auth.supabaseAdmin,
+      auth.user.id,
+      id,
+      'finalize_results'
+    )
+    if (denied) return denied
+
+    const result = await finalizeEventPoints(auth.supabaseAdmin, id)
     if (!result.ok) {
       return NextResponse.json(
         { error: 'Cannot finalize', blockers: result.blockers },
@@ -201,10 +200,18 @@ export async function POST(_request: Request, { params }: RouteParams) {
 export async function DELETE(_request: Request, { params }: RouteParams) {
   try {
     const { id } = await params
-    const auth = await requireAdmin()
-    if ('error' in auth && auth.error) return auth.error
+    const auth = await getAuthedAdminClient()
+    if (!auth.ok) return auth.error
 
-    await unfinalizeEventPoints(auth.supabaseAdmin!, id)
+    const denied = await requireEventCapabilityResponse(
+      auth.supabaseAdmin,
+      auth.user.id,
+      id,
+      'unfinalize_results'
+    )
+    if (denied) return denied
+
+    await unfinalizeEventPoints(auth.supabaseAdmin, id)
     return NextResponse.json({ message: 'Season points revoked for this event' })
   } catch (error) {
     console.error('Unfinalize error:', error)

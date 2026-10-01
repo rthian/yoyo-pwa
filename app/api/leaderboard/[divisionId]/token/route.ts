@@ -1,106 +1,89 @@
 /**
- * Leaderboard Token API
- * Creates shareable links for public leaderboards
- * Uses admin client to bypass RLS for all DB queries
+ * Leaderboard Token API — shareable public leaderboard links.
+ * Create: manage_leaderboard_tokens. List: view_ops.
  */
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 import { randomBytes } from 'crypto'
+import {
+  getAuthedAdminClient,
+  requireEventCapabilityResponse,
+} from '@/lib/auth/request'
+import { resolveEventIdForDivision } from '@/lib/auth/event-permissions'
 
 interface RouteParams {
   params: Promise<{ divisionId: string }>
 }
 
-// Create a new public token
 export async function POST(request: Request, { params }: RouteParams) {
   try {
     const { divisionId } = await params
-    const supabase = await createClient()
-    const supabaseAdmin = createAdminClient()
-    
-    // Check authentication and admin role
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const auth = await getAuthedAdminClient()
+    if (!auth.ok) return auth.error
+
+    const eventId = await resolveEventIdForDivision(auth.supabaseAdmin, divisionId)
+    if (!eventId) {
+      return NextResponse.json({ error: 'Division not found' }, { status: 404 })
     }
 
-    const { data: member } = await supabaseAdmin
-      .from('members')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    const denied = await requireEventCapabilityResponse(
+      auth.supabaseAdmin,
+      auth.user.id,
+      eventId,
+      'manage_leaderboard_tokens'
+    )
+    if (denied) return denied
 
-    if (member?.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Only admins can create share links' },
-        { status: 403 }
-      )
-    }
-
-    // Generate unique token
     const token = randomBytes(32).toString('hex')
-
-    // Parse expiry from request
     const body = await request.json().catch(() => ({}))
-    const expiresIn = body.expiresIn // hours
-    const expiresAt = expiresIn 
+    const expiresIn = body.expiresIn
+    const expiresAt = expiresIn
       ? new Date(Date.now() + expiresIn * 60 * 60 * 1000).toISOString()
       : null
 
-    // Create token record
-    const { data: tokenData, error } = await supabaseAdmin
+    const { data: tokenData, error } = await auth.supabaseAdmin
       .from('leaderboard_tokens')
       .insert({
         division_id: divisionId,
         token,
         is_active: true,
         expires_at: expiresAt,
-        created_by: user.id,
+        created_by: auth.user.id,
       })
       .select()
       .single()
 
     if (error) throw error
 
-    // Build the share URL
     const origin = request.headers.get('origin') || ''
     const shareUrl = `${origin}/leaderboard/${divisionId}?token=${token}`
 
-    return NextResponse.json({
-      token: tokenData,
-      shareUrl,
-    }, { status: 201 })
+    return NextResponse.json({ token: tokenData, shareUrl }, { status: 201 })
   } catch (error) {
     console.error('Token API error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-// Get existing tokens for a division
 export async function GET(request: Request, { params }: RouteParams) {
   try {
     const { divisionId } = await params
-    const supabase = await createClient()
-    const supabaseAdmin = createAdminClient()
-    
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const auth = await getAuthedAdminClient()
+    if (!auth.ok) return auth.error
+
+    const eventId = await resolveEventIdForDivision(auth.supabaseAdmin, divisionId)
+    if (!eventId) {
+      return NextResponse.json({ error: 'Division not found' }, { status: 404 })
     }
 
-    const { data: tokens, error } = await supabaseAdmin
+    const denied = await requireEventCapabilityResponse(
+      auth.supabaseAdmin,
+      auth.user.id,
+      eventId,
+      'view_ops'
+    )
+    if (denied) return denied
+
+    const { data: tokens, error } = await auth.supabaseAdmin
       .from('leaderboard_tokens')
       .select('*')
       .eq('division_id', divisionId)
@@ -110,7 +93,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     if (error) throw error
 
     const origin = request.headers.get('origin') || ''
-    const tokensWithUrls = tokens.map(t => ({
+    const tokensWithUrls = (tokens ?? []).map((t) => ({
       ...t,
       shareUrl: `${origin}/leaderboard/${divisionId}?token=${t.token}`,
     }))
@@ -118,9 +101,6 @@ export async function GET(request: Request, { params }: RouteParams) {
     return NextResponse.json({ tokens: tokensWithUrls })
   } catch (error) {
     console.error('Token API error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

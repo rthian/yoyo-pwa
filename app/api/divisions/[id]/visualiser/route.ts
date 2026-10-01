@@ -11,6 +11,10 @@ import {
   computeJudgeSummaries,
 } from '@/lib/utils/judge-analytics'
 import type { VisualiserScore } from '@/lib/types/visualiser'
+import {
+  canViewDivisionOps,
+  resolveEventIdForDivision,
+} from '@/lib/auth/event-permissions'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -28,28 +32,22 @@ export async function GET(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: currentMember } = await supabaseAdmin
-      .from('members')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    const eventId = await resolveEventIdForDivision(supabaseAdmin, divisionId)
+    if (!eventId) {
+      return NextResponse.json({ error: 'Division not found' }, { status: 404 })
+    }
 
-    const isAdmin = currentMember?.role === 'admin'
-
-    if (!isAdmin) {
-      const { data: assignment } = await supabaseAdmin
-        .from('division_judges')
-        .select('judge_type')
-        .eq('division_id', divisionId)
-        .eq('member_id', user.id)
-        .single()
-
-      if (!assignment || assignment.judge_type !== 'head') {
-        return NextResponse.json(
-          { error: 'Only head judges or admins can view the visualiser' },
-          { status: 403 }
-        )
-      }
+    const allowed = await canViewDivisionOps(
+      supabaseAdmin,
+      user.id,
+      eventId,
+      divisionId
+    )
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Only head judges, event ops staff, or admins can view the visualiser' },
+        { status: 403 }
+      )
     }
 
     const { data: division } = await supabaseAdmin

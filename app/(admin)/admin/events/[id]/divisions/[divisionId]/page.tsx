@@ -12,6 +12,7 @@ import { ArrowLeft, Edit, Users, Trophy, Gavel } from 'lucide-react'
 import DivisionParticipants from '@/components/admin/DivisionParticipants'
 import DivisionJudges from '@/components/admin/DivisionJudges'
 import ShareLeaderboardButton from '@/components/admin/ShareLeaderboardButton'
+import MusicReadinessPanel from '@/components/admin/MusicReadinessPanel'
 
 interface DivisionDetailPageProps {
   params: Promise<{ id: string; divisionId: string }>
@@ -128,6 +129,7 @@ export default async function DivisionDetailPage({ params }: DivisionDetailPageP
             <Gavel className="h-4 w-4" />
             Judges
           </TabsTrigger>
+          <TabsTrigger value="music">Music</TabsTrigger>
         </TabsList>
 
         <TabsContent value="participants">
@@ -154,6 +156,20 @@ export default async function DivisionDetailPage({ params }: DivisionDetailPageP
             </CardHeader>
             <CardContent>
               <DivisionJudges divisionId={divisionId} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="music">
+          <Card>
+            <CardHeader>
+              <CardTitle>Music</CardTitle>
+              <CardDescription>
+                Competitor music readiness (private storage)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MusicReadinessPanel divisionId={divisionId} eventId={eventId} />
             </CardContent>
           </Card>
         </TabsContent>

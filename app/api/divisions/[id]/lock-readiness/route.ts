@@ -16,6 +16,10 @@ import {
 } from '@/lib/utils/judge-analytics'
 import { assessLockReadiness } from '@/lib/typesafe/lock-readiness'
 import type { VisualiserScore } from '@/lib/types/visualiser'
+import {
+  canLockDivisionScores,
+  resolveEventIdForDivision,
+} from '@/lib/auth/event-permissions'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -30,24 +34,18 @@ async function assertHeadOrAdmin(divisionId: string) {
 
   if (!user) return { ok: false as const, status: 401, error: 'Unauthorized' }
 
-  const { data: currentMember } = await supabaseAdmin
-    .from('members')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (currentMember?.role === 'admin') {
-    return { ok: true as const, supabaseAdmin }
+  const eventId = await resolveEventIdForDivision(supabaseAdmin, divisionId)
+  if (!eventId) {
+    return { ok: false as const, status: 404, error: 'Division not found' }
   }
 
-  const { data: assignment } = await supabaseAdmin
-    .from('division_judges')
-    .select('judge_type')
-    .eq('division_id', divisionId)
-    .eq('member_id', user.id)
-    .single()
-
-  if (!assignment || assignment.judge_type !== 'head') {
+  const allowed = await canLockDivisionScores(
+    supabaseAdmin,
+    user.id,
+    eventId,
+    divisionId
+  )
+  if (!allowed) {
     return {
       ok: false as const,
       status: 403,

@@ -10,6 +10,74 @@ export type DivisionMemberStatus = 'registered' | 'checked_in' | 'playing' | 'co
 export type JudgeType = 'head' | 'general' | 'technical' | 'performance' | 'shadow'
 export type RoundType = 'wildcard' | 'qualifier' | 'semi_final' | 'final' | 'exhibition' | 'other'
 export type ScheduleEntryType = 'ceremony' | 'break' | 'registration' | 'other'
+/** Slice A identity: account→competitor relationship */
+export type CompetitorRelationship = 'self' | 'guardian' | 'manager' | 'coach'
+export type CompetitorCapability = 'any' | 'register' | 'music' | 'profile'
+export type ProfileVisibility = 'public' | 'members_only' | 'private'
+
+/** Prompt 5 registration aggregate */
+export type RegistrationStatus =
+  | 'draft'
+  | 'pending'
+  | 'confirmed'
+  | 'waitlisted'
+  | 'cancelled'
+  | 'rejected'
+  | 'checked_in'
+
+export type EligibilityStatus =
+  | 'not_reviewed'
+  | 'pending'
+  | 'eligible'
+  | 'ineligible'
+  | 'needs_info'
+
+export type PaymentStatusPlaceholder =
+  | 'not_required'
+  | 'unpaid'
+  | 'pending'
+  | 'paid'
+  | 'waived'
+  | 'refunded'
+
+export type WaiverStatusPlaceholder =
+  | 'not_required'
+  | 'pending'
+  | 'signed'
+  | 'declined'
+
+export type RegistrationEntryStatus = RegistrationStatus
+
+/** Prompt 3: event-scoped staff roles (accounts, not competitors) */
+export type EventStaffRole =
+  | 'owner'
+  | 'organizer'
+  | 'registration_manager'
+  | 'music_manager'
+  | 'head_judge'
+  | 'stage_manager'
+  | 'readonly_staff'
+
+export type EventCapability =
+  | 'manage_event'
+  | 'manage_staff'
+  | 'delete_event'
+  | 'cancel_event'
+  | 'manage_divisions'
+  | 'assign_judges'
+  | 'manage_registration'
+  | 'manage_music'
+  | 'manage_schedule'
+  | 'manage_play_order'
+  | 'check_in'
+  | 'lock_scores'
+  | 'view_ops'
+  | 'finalize_results'
+  | 'unfinalize_results'
+  | 'publish_results'
+  | 'manage_leaderboard_tokens'
+
+export type EventStaffRoleAuditAction = 'grant' | 'revoke'
 
 export interface Member {
   id: string
@@ -21,9 +89,111 @@ export interface Member {
   home_geo_id?: string | null
   gender?: 'female' | 'male' | 'other' | 'undisclosed' | null
   public_id?: string | null
+  avatar_url?: string | null
+  bio?: string | null
+  profile_visibility?: ProfileVisibility | null
+  first_competed_on?: string | null
   is_active: boolean
   created_at: string
   updated_at: string
+}
+
+/** Persistent competition identity (Slice A). Not an Auth UID. */
+export interface Competitor {
+  id: string
+  source_member_id?: string | null
+  public_id: string | null
+  full_name: string
+  nickname: string | null
+  country: string | null
+  home_geo_id: string | null
+  gender: 'female' | 'male' | 'other' | 'undisclosed' | null
+  avatar_url: string | null
+  bio: string | null
+  profile_visibility: ProfileVisibility
+  date_of_birth: string | null
+  first_competed_on: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface AccountCompetitorLink {
+  id: string
+  account_id: string
+  competitor_id: string
+  relationship: CompetitorRelationship
+  can_register: boolean
+  can_manage_music: boolean
+  can_manage_profile: boolean
+  granted_by: string | null
+  created_at: string
+}
+
+export type MusicSubmissionStatus =
+  | 'missing'
+  | 'uploaded'
+  | 'processing'
+  | 'flagged'
+  | 'approved'
+  | 'rejected'
+  | 'locked'
+
+export type MusicBackupStatus = 'unknown' | 'pending' | 'cached' | 'failed' | 'stale'
+
+export interface MusicRequirement {
+  id: string
+  division_id: string
+  deadline_at: string | null
+  max_duration_seconds: number
+  max_bytes: number
+  allowed_mime_types: string[]
+  policy_text: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface MusicSubmission {
+  id: string
+  division_id: string
+  competitor_id: string
+  status: MusicSubmissionStatus
+  active_version_id: string | null
+  deadline_exception_until: string | null
+  backup_status: MusicBackupStatus
+  backup_checked_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface MusicSubmissionVersion {
+  id: string
+  submission_id: string
+  version_number: number
+  storage_path: string
+  original_filename: string | null
+  display_filename: string | null
+  mime_type: string | null
+  byte_size: number | null
+  checksum_sha256: string | null
+  duration_seconds: number | null
+  validation_pending: boolean
+  is_active: boolean
+  copyright_declared: boolean
+  explicit_content_declared: boolean
+  usage_declared: boolean
+  uploaded_by_account_id: string | null
+  created_at: string
+}
+
+export interface MusicAuditEvent {
+  id: string
+  submission_id: string
+  version_id: string | null
+  actor_account_id: string | null
+  action: string
+  detail: Record<string, unknown>
+  created_at: string
 }
 
 export interface Event {
@@ -32,6 +202,26 @@ export interface Event {
   description: string | null
   location: string | null
   event_date: string | null
+  starts_at?: string | null
+  ends_at?: string | null
+  timezone?: string | null
+  registration_opens_at?: string | null
+  registration_closes_at?: string | null
+  music_deadline_at?: string | null
+  check_in_opens_at?: string | null
+  check_in_closes_at?: string | null
+  venue_name?: string | null
+  address_line1?: string | null
+  address_line2?: string | null
+  city?: string | null
+  region?: string | null
+  postal_code?: string | null
+  country_code?: string | null
+  website_url?: string | null
+  social_links?: Record<string, string> | null
+  organizer_contact_name?: string | null
+  organizer_contact_email?: string | null
+  organizer_contact_public?: boolean | null
   status: EventStatus
   ruleset_id: string | null
   season_id?: string | null
@@ -40,6 +230,29 @@ export interface Event {
   created_by: string | null
   created_at: string
   updated_at: string
+}
+
+export interface EventStaffRoleRow {
+  id: string
+  event_id: string
+  account_id: string
+  role: EventStaffRole
+  granted_by: string | null
+  granted_at: string
+  revoked_at: string | null
+  revoked_by: string | null
+  created_at: string
+}
+
+export interface EventStaffRoleAudit {
+  id: string
+  event_id: string
+  account_id: string
+  role: EventStaffRole
+  action: EventStaffRoleAuditAction
+  actor_id: string | null
+  note: string | null
+  created_at: string
 }
 
 export interface Division {
@@ -59,8 +272,52 @@ export interface Division {
   category_id?: string | null
   eligibility?: 'open' | 'women' | 'youth' | 'masters' | null
   field_scope?: 'championship' | 'invitational' | null
+  capacity?: number | null
+  waitlist_enabled?: boolean
+  track_id?: string | null
+  stage_order?: number
+  allow_direct_entry?: boolean
   created_at: string
   updated_at: string
+}
+
+export interface Registration {
+  id: string
+  event_id: string
+  competitor_id: string
+  submitted_by_account_id: string | null
+  status: RegistrationStatus
+  eligibility_status: EligibilityStatus
+  payment_status: PaymentStatusPlaceholder
+  waiver_status: WaiverStatusPlaceholder
+  cancelled_at: string | null
+  cancellation_reason: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RegistrationEntry {
+  id: string
+  registration_id: string
+  division_id: string
+  status: RegistrationEntryStatus
+  waitlist_position: number | null
+  division_member_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RegistrationAuditEvent {
+  id: string
+  registration_id: string
+  registration_entry_id: string | null
+  actor_account_id: string | null
+  action: string
+  from_status: string | null
+  to_status: string | null
+  detail: Record<string, unknown>
+  created_at: string
 }
 
 export interface DivisionMember {

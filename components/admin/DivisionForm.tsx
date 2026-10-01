@@ -71,6 +71,8 @@ export default function DivisionForm({ eventId, division }: DivisionFormProps) {
       field_scope:
         ((division as { field_scope?: 'championship' | 'invitational' })
           ?.field_scope as 'championship' | 'invitational' | undefined) || 'championship',
+      capacity: division?.capacity ?? null,
+      waitlist_enabled: division?.waitlist_enabled ?? true,
     },
   })
 
@@ -78,6 +80,7 @@ export default function DivisionForm({ eventId, division }: DivisionFormProps) {
   const isActive = watch('is_active')
   const hideScoresUntilComplete = watch('hide_scores_until_complete')
   const roundType = watch('round_type')
+  const waitlistEnabled = watch('waitlist_enabled')
   const categoryId = watch('category_id')
   const eligibility = watch('eligibility')
   const fieldScope = watch('field_scope')
@@ -292,6 +295,29 @@ export default function DivisionForm({ eventId, division }: DivisionFormProps) {
               placeholder="Main Stage, Room A, etc."
               {...register('venue')}
             />
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="capacity">Capacity (blank = unlimited)</Label>
+            <Input
+              id="capacity"
+              type="number"
+              min={1}
+              placeholder="Unlimited"
+              {...register('capacity', {
+                setValueAs: (v) =>
+                  v === '' || v === null || v === undefined ? null : Number(v),
+              })}
+            />
+          </div>
+          <div className="flex items-center gap-3 pt-8">
+            <Switch
+              checked={Boolean(waitlistEnabled)}
+              onCheckedChange={(v) => setValue('waitlist_enabled', v)}
+            />
+            <Label>Enable waitlist when full</Label>
           </div>
         </div>
 

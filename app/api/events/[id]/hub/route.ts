@@ -8,6 +8,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
+import {
+  formatInTimeZone,
+  getRegistrationAvailability,
+} from '@/lib/events/timing'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -24,7 +28,14 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const { data: event, error: eventError } = await admin
       .from('events')
-      .select('id, name, description, event_date, location, status')
+      .select(
+        `id, name, description, event_date, location, status,
+         starts_at, ends_at, timezone,
+         registration_opens_at, registration_closes_at, music_deadline_at,
+         check_in_opens_at, check_in_closes_at,
+         venue_name, address_line1, address_line2, city, region, postal_code, country_code,
+         website_url, organizer_contact_name, organizer_contact_email, organizer_contact_public`
+      )
       .eq('id', eventId)
       .single()
 
@@ -39,10 +50,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: 'Event not available' }, { status: 404 })
     }
 
+    const reg = getRegistrationAvailability(event)
+    const tz = event.timezone || 'UTC'
+
     const { data: divisions, error: divError } = await admin
       .from('divisions')
       .select(
-        'id, name, description, scoring_type, round_type, scheduled_start, scheduled_end, venue, sort_order, scoring_locked, is_active'
+        'id, name, description, scoring_type, round_type, scheduled_start, scheduled_end, venue, sort_order, scoring_locked, is_active, capacity, waitlist_enabled'
       )
       .eq('event_id', eventId)
       .eq('is_active', true)
@@ -162,8 +176,24 @@ export async function GET(_request: Request, { params }: RouteParams) {
       }))
 
     return NextResponse.json({
-      event,
-      registrationOpen: ['published', 'active'].includes(event.status),
+      event: {
+        ...event,
+        starts_at_local: event.starts_at
+          ? formatInTimeZone(event.starts_at, tz)
+          : null,
+        ends_at_local: event.ends_at ? formatInTimeZone(event.ends_at, tz) : null,
+        registration_opens_at_local: event.registration_opens_at
+          ? formatInTimeZone(event.registration_opens_at, tz)
+          : null,
+        registration_closes_at_local: event.registration_closes_at
+          ? formatInTimeZone(event.registration_closes_at, tz)
+          : null,
+        music_deadline_at_local: event.music_deadline_at
+          ? formatInTimeZone(event.music_deadline_at, tz)
+          : null,
+      },
+      registrationOpen: reg.open,
+      registrationReason: reg.reason,
       authenticated: Boolean(user),
       divisions: enrichedDivisions,
       schedule,

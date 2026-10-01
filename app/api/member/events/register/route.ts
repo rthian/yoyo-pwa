@@ -1,12 +1,14 @@
 /**
- * Member Event Registration API Route
- * Allows members to register/unregister for event divisions
- * Called by: components/events/EventHubClient.tsx, app/(member)/member/events/page.tsx
- * User: "yes" (start event hub) — repair after max_participants removal
+ * Member registration — uses Prompt 5 aggregate (confirmed → division_members).
  */
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
+import {
+  cancelRegistration,
+  registerSelfForDivision,
+} from '@/lib/registration/service'
+import { getCompetitorIdForMember } from '@/lib/identity/competitors'
 
 export async function POST(request: Request) {
   try {
@@ -33,57 +35,99 @@ export async function POST(request: Request) {
       )
     }
 
-    const { data: division, error: divError } = await supabaseAdmin
+    if (action === 'register') {
+      try {
+        const result = await registerSelfForDivision(supabaseAdmin, {
+          accountId: user.id,
+          divisionId: division_id,
+        })
+        return NextResponse.json({
+          message:
+            result.entry.status === 'waitlisted'
+              ? 'Waitlisted for this division'
+              : 'Successfully registered',
+          registered: result.entry.status === 'confirmed' || result.entry.status === 'checked_in',
+          waitlisted: result.entry.status === 'waitlisted',
+          registration: result.registration,
+          entry: result.entry,
+        })
+      } catch (err) {
+        const status = (err as Error & { status?: number }).status ?? 500
+        return NextResponse.json(
+          {
+            error: err instanceof Error ? err.message : 'Registration failed',
+            reason: (err as Error & { reason?: string }).reason,
+          },
+          { status: status === 403 ? 403 : status === 400 ? 400 : 500 }
+        )
+      }
+    }
+
+    // unregister: cancel entry for this division if present; else legacy delete
+    const { data: division } = await supabaseAdmin
       .from('divisions')
-      .select(
-        `
-        id,
-        event:events(id, status)
-      `
-      )
+      .select('id, event_id')
       .eq('id', division_id)
       .single()
 
-    if (divError || !division) {
+    if (!division) {
       return NextResponse.json({ error: 'Division not found' }, { status: 404 })
     }
 
-    const event = division.event as unknown as { id: string; status: string }
-    if (!event || !['published', 'active'].includes(event.status)) {
-      return NextResponse.json(
-        { error: 'Registration is not currently open for this event' },
-        { status: 400 }
-      )
-    }
-
-    if (action === 'register') {
-      const { data: existing } = await supabaseAdmin
-        .from('division_members')
+    const competitorId = await getCompetitorIdForMember(supabaseAdmin, user.id)
+    if (competitorId) {
+      const { data: reg } = await supabaseAdmin
+        .from('registrations')
         .select('id')
-        .eq('division_id', division_id)
-        .eq('member_id', user.id)
+        .eq('event_id', division.event_id)
+        .eq('competitor_id', competitorId)
         .maybeSingle()
 
-      if (existing) {
-        return NextResponse.json(
-          { error: 'Already registered for this division' },
-          { status: 400 }
-        )
-      }
+      if (reg) {
+        const { data: entry } = await supabaseAdmin
+          .from('registration_entries')
+          .select('*')
+          .eq('registration_id', reg.id)
+          .eq('division_id', division_id)
+          .maybeSingle()
 
-      const { error: insertError } = await supabaseAdmin
-        .from('division_members')
-        .insert({
-          division_id,
-          member_id: user.id,
-          status: 'registered',
+        if (entry?.division_member_id) {
+          await supabaseAdmin
+            .from('division_members')
+            .delete()
+            .eq('id', entry.division_member_id)
+        }
+
+        if (entry) {
+          await supabaseAdmin
+            .from('registration_entries')
+            .update({
+              status: 'cancelled',
+              waitlist_position: null,
+              division_member_id: null,
+            })
+            .eq('id', entry.id)
+        }
+
+        const { count } = await supabaseAdmin
+          .from('registration_entries')
+          .select('*', { count: 'exact', head: true })
+          .eq('registration_id', reg.id)
+          .in('status', ['confirmed', 'pending', 'waitlisted', 'draft', 'checked_in'])
+
+        if ((count ?? 0) === 0) {
+          await cancelRegistration(supabaseAdmin, {
+            registrationId: reg.id,
+            accountId: user.id,
+            reason: 'Unregistered from all divisions',
+          })
+        }
+
+        return NextResponse.json({
+          message: 'Successfully unregistered',
+          registered: false,
         })
-
-      if (insertError) {
-        return NextResponse.json({ error: insertError.message }, { status: 500 })
       }
-
-      return NextResponse.json({ message: 'Successfully registered', registered: true })
     }
 
     const { error: deleteError } = await supabaseAdmin

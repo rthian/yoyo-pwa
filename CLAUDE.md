@@ -150,6 +150,15 @@ Applied in order from `supabase/migrations/`:
 1. `001_*` — base schema (covered by `schema.sql`)
 2. `002_scoring_lock_and_hide.sql` — adds `scoring_locked` and `hide_scores_until_complete` to `divisions`
 3. `003_judge_included_and_shadow.sql` — adds `scores_included_in_leaderboard` to `division_judges`; extends `judge_type` with `shadow`
+4. `004`–`010` — league rankings, profiles, races, field_scope, major deduction counts
+5. `011_competitors_identity.sql` — Slice A: `competitors` + `account_competitor_links` (accounts stay on `members`; no FK remaps yet)
+6. `012_event_staff_roles.sql` — Prompt 3: `event_staff_roles` + audit + capability helpers; APIs use `lib/auth/event-permissions.ts`
+7. `013_event_timing.sql` — Prompt 4: TIMESTAMPTZ windows, venue/address, keeps `event_date`
+8. `014_registrations.sql` — Prompt 5: registrations + entries + audit; sync confirmed → division_members; capacity/waitlist
+9. `015_competition_tracks.sql` — Prompt 6: tracks/stages; advancement decisions (no auto-advance)
+10. `016_score_revisions_idempotency.sql` — Prompt 7–8: score_revisions + score_version + client_submission_id
+11. `017_music_submissions.sql` — Prompt 10: music requirements/submissions/versions (private bucket `competition-music`)
+12. `018_music_stage_ops.sql` — Prompt 11: backup_status + display_filename for stage ops
 
 ---
 
