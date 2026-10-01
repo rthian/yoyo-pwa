@@ -150,6 +150,8 @@ Applied in order from `supabase/migrations/`:
 1. `001_*` — base schema (covered by `schema.sql`)
 2. `002_scoring_lock_and_hide.sql` — adds `scoring_locked` and `hide_scores_until_complete` to `divisions`
 3. `003_judge_included_and_shadow.sql` — adds `scores_included_in_leaderboard` to `division_judges`; extends `judge_type` with `shadow`
+4. `004`–`010` — league rankings, profiles, races, field_scope, major deduction counts
+5. `011_competitors_identity.sql` — Slice A: `competitors` + `account_competitor_links` (accounts stay on `members`; no FK remaps yet)
 
 ---
 

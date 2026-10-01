@@ -10,6 +10,10 @@ export type DivisionMemberStatus = 'registered' | 'checked_in' | 'playing' | 'co
 export type JudgeType = 'head' | 'general' | 'technical' | 'performance' | 'shadow'
 export type RoundType = 'wildcard' | 'qualifier' | 'semi_final' | 'final' | 'exhibition' | 'other'
 export type ScheduleEntryType = 'ceremony' | 'break' | 'registration' | 'other'
+/** Slice A identity: account→competitor relationship */
+export type CompetitorRelationship = 'self' | 'guardian' | 'manager' | 'coach'
+export type CompetitorCapability = 'any' | 'register' | 'music' | 'profile'
+export type ProfileVisibility = 'public' | 'members_only' | 'private'
 
 export interface Member {
   id: string
@@ -21,9 +25,45 @@ export interface Member {
   home_geo_id?: string | null
   gender?: 'female' | 'male' | 'other' | 'undisclosed' | null
   public_id?: string | null
+  avatar_url?: string | null
+  bio?: string | null
+  profile_visibility?: ProfileVisibility | null
+  first_competed_on?: string | null
   is_active: boolean
   created_at: string
   updated_at: string
+}
+
+/** Persistent competition identity (Slice A). Not an Auth UID. */
+export interface Competitor {
+  id: string
+  source_member_id?: string | null
+  public_id: string | null
+  full_name: string
+  nickname: string | null
+  country: string | null
+  home_geo_id: string | null
+  gender: 'female' | 'male' | 'other' | 'undisclosed' | null
+  avatar_url: string | null
+  bio: string | null
+  profile_visibility: ProfileVisibility
+  date_of_birth: string | null
+  first_competed_on: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface AccountCompetitorLink {
+  id: string
+  account_id: string
+  competitor_id: string
+  relationship: CompetitorRelationship
+  can_register: boolean
+  can_manage_music: boolean
+  can_manage_profile: boolean
+  granted_by: string | null
+  created_at: string
 }
 
 export interface Event {
