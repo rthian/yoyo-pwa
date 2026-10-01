@@ -130,6 +130,72 @@ export interface AccountCompetitorLink {
   created_at: string
 }
 
+export type MusicSubmissionStatus =
+  | 'missing'
+  | 'uploaded'
+  | 'processing'
+  | 'flagged'
+  | 'approved'
+  | 'rejected'
+  | 'locked'
+
+export type MusicBackupStatus = 'unknown' | 'pending' | 'cached' | 'failed' | 'stale'
+
+export interface MusicRequirement {
+  id: string
+  division_id: string
+  deadline_at: string | null
+  max_duration_seconds: number
+  max_bytes: number
+  allowed_mime_types: string[]
+  policy_text: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface MusicSubmission {
+  id: string
+  division_id: string
+  competitor_id: string
+  status: MusicSubmissionStatus
+  active_version_id: string | null
+  deadline_exception_until: string | null
+  backup_status: MusicBackupStatus
+  backup_checked_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface MusicSubmissionVersion {
+  id: string
+  submission_id: string
+  version_number: number
+  storage_path: string
+  original_filename: string | null
+  display_filename: string | null
+  mime_type: string | null
+  byte_size: number | null
+  checksum_sha256: string | null
+  duration_seconds: number | null
+  validation_pending: boolean
+  is_active: boolean
+  copyright_declared: boolean
+  explicit_content_declared: boolean
+  usage_declared: boolean
+  uploaded_by_account_id: string | null
+  created_at: string
+}
+
+export interface MusicAuditEvent {
+  id: string
+  submission_id: string
+  version_id: string | null
+  actor_account_id: string | null
+  action: string
+  detail: Record<string, unknown>
+  created_at: string
+}
+
 export interface Event {
   id: string
   name: string

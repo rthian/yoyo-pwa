@@ -158,6 +158,7 @@ Applied in order from `supabase/migrations/`:
 9. `015_competition_tracks.sql` — Prompt 6: tracks/stages; advancement decisions (no auto-advance)
 10. `016_score_revisions_idempotency.sql` — Prompt 7–8: score_revisions + score_version + client_submission_id
 11. `017_music_submissions.sql` — Prompt 10: music requirements/submissions/versions (private bucket `competition-music`)
+12. `018_music_stage_ops.sql` — Prompt 11: backup_status + display_filename for stage ops
 
 ---
 

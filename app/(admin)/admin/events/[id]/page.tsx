@@ -24,14 +24,27 @@ import FinalizeEventPanel from '@/components/admin/FinalizeEventPanel'
 import EventStaffPanel from '@/components/admin/EventStaffPanel'
 import EventRegistrationsPanel from '@/components/admin/EventRegistrationsPanel'
 import EventTracksPanel from '@/components/admin/EventTracksPanel'
+import EventMusicOpsPanel from '@/components/admin/EventMusicOpsPanel'
 import { formatInTimeZone } from '@/lib/events/timing'
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ tab?: string }>
 }
 
-export default async function EventDetailPage({ params }: EventDetailPageProps) {
+export default async function EventDetailPage({ params, searchParams }: EventDetailPageProps) {
   const { id } = await params
+  const { tab: tabParam } = await searchParams
+  const allowedTabs = new Set([
+    'divisions',
+    'tracks',
+    'music',
+    'schedule',
+    'registrations',
+    'staff',
+  ])
+  const defaultTab =
+    tabParam && allowedTabs.has(tabParam) ? tabParam : 'divisions'
   const { createAdminClient } = await import('@/lib/supabase/admin')
   const supabase = createAdminClient()
 
@@ -143,10 +156,11 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       <FinalizeEventPanel eventId={id} />
 
       {/* Divisions & Schedule Tabs */}
-      <Tabs defaultValue="divisions">
+      <Tabs defaultValue={defaultTab}>
         <TabsList>
           <TabsTrigger value="divisions">Divisions</TabsTrigger>
           <TabsTrigger value="tracks">Tracks</TabsTrigger>
+          <TabsTrigger value="music">Music ops</TabsTrigger>
           <TabsTrigger value="schedule">Schedule</TabsTrigger>
           <TabsTrigger value="registrations">Registrations</TabsTrigger>
           <TabsTrigger value="staff">Staff</TabsTrigger>
@@ -184,6 +198,20 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             </CardHeader>
             <CardContent>
               <EventTracksPanel eventId={id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="music">
+          <Card>
+            <CardHeader>
+              <CardTitle>Stage music operations</CardTitle>
+              <CardDescription>
+                Readiness by stage, running order, offline preflight cache, emergency replace
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EventMusicOpsPanel eventId={id} />
             </CardContent>
           </Card>
         </TabsContent>

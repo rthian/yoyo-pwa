@@ -169,7 +169,7 @@ export default async function DivisionDetailPage({ params }: DivisionDetailPageP
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <MusicReadinessPanel divisionId={divisionId} />
+              <MusicReadinessPanel divisionId={divisionId} eventId={eventId} />
             </CardContent>
           </Card>
         </TabsContent>
