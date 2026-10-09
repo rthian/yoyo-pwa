@@ -69,37 +69,63 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const divisionIds = (divisions ?? []).map((d) => d.id)
 
-    const [{ data: counts }, { data: registrations }, scheduleRes, tokensRes] =
-      await Promise.all([
-        divisionIds.length
-          ? admin.from('division_members').select('division_id').in('division_id', divisionIds)
-          : Promise.resolve({ data: [] as { division_id: string }[] }),
-        user && divisionIds.length
-          ? admin
-              .from('division_members')
-              .select('division_id')
-              .eq('member_id', user.id)
-              .in('division_id', divisionIds)
-          : Promise.resolve({ data: [] as { division_id: string }[] }),
-        admin
-          .from('schedule_entries')
-          .select('*')
-          .eq('event_id', eventId)
-          .order('scheduled_start', { ascending: true, nullsFirst: false })
-          .order('sort_order', { ascending: true }),
-        admin
-          .from('leaderboard_tokens')
-          .select('token, views_count, division_id, created_at')
-          .eq('is_active', true)
-          .in('division_id', divisionIds.length ? divisionIds : ['__none__'])
-          .order('created_at', { ascending: false }),
-      ])
+    // Callers: EventHubClient — media rows: { id, title, url, kind, provider }
+    // User: "prompt 13"
+    const [
+      { data: counts },
+      { data: registrations },
+      scheduleRes,
+      tokensRes,
+      mediaRes,
+    ] = await Promise.all([
+      divisionIds.length
+        ? admin.from('division_members').select('division_id').in('division_id', divisionIds)
+        : Promise.resolve({ data: [] as { division_id: string }[] }),
+      user && divisionIds.length
+        ? admin
+            .from('division_members')
+            .select('division_id')
+            .eq('member_id', user.id)
+            .in('division_id', divisionIds)
+        : Promise.resolve({ data: [] as { division_id: string }[] }),
+      admin
+        .from('schedule_entries')
+        .select('*')
+        .eq('event_id', eventId)
+        .order('scheduled_start', { ascending: true, nullsFirst: false })
+        .order('sort_order', { ascending: true }),
+      admin
+        .from('leaderboard_tokens')
+        .select('token, views_count, division_id, created_at')
+        .eq('is_active', true)
+        .in('division_id', divisionIds.length ? divisionIds : ['__none__'])
+        .order('created_at', { ascending: false }),
+      admin
+        .from('event_external_media')
+        .select(
+          'id, title, url, kind, provider, description, thumbnail_url, sort_order, division_id'
+        )
+        .eq('event_id', eventId)
+        .eq('is_public', true)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true }),
+    ])
 
     if (scheduleRes.error) {
       return NextResponse.json({ error: scheduleRes.error.message }, { status: 500 })
     }
     if (tokensRes.error) {
       return NextResponse.json({ error: tokensRes.error.message }, { status: 500 })
+    }
+    // Missing table before migration 020 — treat as empty media list
+    const media =
+      mediaRes.error && /event_external_media|schema cache/i.test(mediaRes.error.message)
+        ? []
+        : mediaRes.error
+          ? null
+          : mediaRes.data ?? []
+    if (media === null) {
+      return NextResponse.json({ error: mediaRes.error!.message }, { status: 500 })
     }
 
     const countMap = new Map<string, number>()
@@ -202,6 +228,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       publicBoards,
       resultsPublished: Boolean(event.results_published_at),
       resultsPublishedAt: event.results_published_at ?? null,
+      media,
     })
   } catch (error) {
     console.error('Event hub error:', error)

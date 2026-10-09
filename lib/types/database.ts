@@ -79,6 +79,38 @@ export type EventCapability =
 
 export type EventStaffRoleAuditAction = 'grant' | 'revoke'
 
+/** Prompt 13: curated external media (links; embeds in Prompt 15) */
+export type ExternalMediaKind =
+  | 'livestream'
+  | 'highlight'
+  | 'routine'
+  | 'photo_album'
+  | 'other'
+
+export type ExternalMediaProvider =
+  | 'youtube'
+  | 'vimeo'
+  | 'twitch'
+  | 'instagram'
+  | 'other'
+
+export interface EventExternalMedia {
+  id: string
+  event_id: string
+  division_id: string | null
+  kind: ExternalMediaKind
+  provider: ExternalMediaProvider
+  url: string
+  title: string
+  description: string | null
+  thumbnail_url: string | null
+  sort_order: number
+  is_public: boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Member {
   id: string
   email: string
