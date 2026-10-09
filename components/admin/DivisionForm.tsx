@@ -28,9 +28,15 @@ import type { PlayCategory } from '@/lib/rankings/types'
 interface DivisionFormProps {
   eventId: string
   division?: Division
+  /** `/admin` (default) or `/organize` */
+  basePath?: string
 }
 
-export default function DivisionForm({ eventId, division }: DivisionFormProps) {
+export default function DivisionForm({
+  eventId,
+  division,
+  basePath = '/admin',
+}: DivisionFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState<PlayCategory[]>([])
@@ -104,7 +110,7 @@ export default function DivisionForm({ eventId, division }: DivisionFormProps) {
         }
 
         toast.success('Division updated successfully')
-        router.push(`/admin/events/${eventId}/divisions/${division.id}`)
+        router.push(`${basePath}/events/${eventId}/divisions/${division.id}`)
       } else {
         // Create new division via API
         const response = await fetch('/api/divisions', {
@@ -120,7 +126,9 @@ export default function DivisionForm({ eventId, division }: DivisionFormProps) {
         }
 
         toast.success('Division created successfully')
-        router.push(`/admin/events/${eventId}/divisions/${result.division.id}`)
+        router.push(
+          `${basePath}/events/${eventId}/divisions/${result.division.id}`
+        )
       }
 
       router.refresh()

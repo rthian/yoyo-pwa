@@ -13,6 +13,8 @@ import { toast } from 'sonner'
 interface MusicReadinessPanelProps {
   divisionId: string
   eventId?: string
+  /** `/admin` (default) or `/organize` */
+  basePath?: string
 }
 
 type Submission = {
@@ -25,6 +27,7 @@ type Submission = {
 export default function MusicReadinessPanel({
   divisionId,
   eventId,
+  basePath = '/admin',
 }: MusicReadinessPanelProps) {
   const [rows, setRows] = useState<Submission[]>([])
   const [loading, setLoading] = useState(true)
@@ -90,7 +93,9 @@ export default function MusicReadinessPanel({
         <h3 className="font-medium">Music readiness</h3>
         {eventId && (
           <Button variant="link" size="sm" className="h-auto p-0" asChild>
-            <a href={`/admin/events/${eventId}?tab=music`}>Event music ops →</a>
+            <a href={`${basePath}/events/${eventId}?tab=music`}>
+              Event music ops →
+            </a>
           </Button>
         )}
       </div>

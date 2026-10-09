@@ -6,7 +6,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -25,14 +24,18 @@ import { toast } from 'sonner'
 interface DeleteEventButtonProps {
   eventId: string
   eventName: string
+  redirectTo?: string
 }
 
-export default function DeleteEventButton({ eventId, eventName }: DeleteEventButtonProps) {
+export default function DeleteEventButton({
+  eventId,
+  eventName,
+  redirectTo = '/admin/events',
+}: DeleteEventButtonProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [confirmText, setConfirmText] = useState('')
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
 
   const handleDelete = async () => {
     if (confirmText !== eventName) {
@@ -43,19 +46,16 @@ export default function DeleteEventButton({ eventId, eventName }: DeleteEventBut
     setLoading(true)
 
     try {
-      const { error } = await supabase
-        .from('events')
-        .delete()
-        .eq('id', eventId)
-
-      if (error) throw error
+      const res = await fetch(`/api/events/${eventId}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to delete event')
 
       toast.success('Event deleted successfully')
-      router.push('/admin/events')
+      router.push(redirectTo)
       router.refresh()
     } catch (error) {
       console.error('Error deleting event:', error)
-      toast.error('Failed to delete event')
+      toast.error(error instanceof Error ? error.message : 'Failed to delete event')
     } finally {
       setLoading(false)
       setOpen(false)

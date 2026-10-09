@@ -19,6 +19,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import type { Member } from '@/lib/types/database'
+import OrganizeEntryCard from '@/components/organize/OrganizeEntryCard'
 
 interface AdminDashboardViewProps {
   member: Member
@@ -36,6 +37,8 @@ export default function AdminDashboardView({ member }: AdminDashboardViewProps) 
             Here&apos;s your admin dashboard overview
           </p>
         </div>
+
+        <OrganizeEntryCard />
 
         {/* Quick Actions */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">

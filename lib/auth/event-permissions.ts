@@ -108,6 +108,18 @@ export async function listEventStaff(
   return (data ?? []) as EventStaffRoleRow[]
 }
 
+/** Pure check: roles + admin flag → capability (no DB). */
+export function rolesGrantCapability(
+  roles: EventStaffRole[],
+  capability: EventCapability,
+  options?: { isAdmin?: boolean }
+): boolean {
+  if (options?.isAdmin) return true
+  const allowed = EVENT_CAPABILITY_ROLES[capability]
+  if (!allowed.length) return false
+  return roles.some((r) => allowed.includes(r))
+}
+
 export async function hasEventCapability(
   supabase: SupabaseClient,
   accountId: string,
@@ -116,11 +128,8 @@ export async function hasEventCapability(
 ): Promise<boolean> {
   if (await isGlobalAdmin(supabase, accountId)) return true
 
-  const allowed = EVENT_CAPABILITY_ROLES[capability]
-  if (!allowed.length) return false
-
   const roles = await getActiveEventRoles(supabase, accountId, eventId)
-  return roles.some((r) => allowed.includes(r))
+  return rolesGrantCapability(roles, capability)
 }
 
 async function isDivisionHeadJudge(

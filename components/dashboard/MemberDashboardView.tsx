@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import type { Member } from '@/lib/types/database'
 import MemberHeader from '@/components/shared/MemberHeader'
+import OrganizeEntryCard from '@/components/organize/OrganizeEntryCard'
 import { formatCountryWithFlag } from '@/lib/utils/country-flags'
 
 interface MemberDashboardViewProps {
@@ -118,6 +119,8 @@ export default function MemberDashboardView({ member }: MemberDashboardViewProps
               {countryDisplay ? '· ' : ''}Here&apos;s your competition overview
             </p>
           </div>
+
+          <OrganizeEntryCard />
 
           {/* Upcoming Sessions - Priority Section */}
           <Card className="mb-6 border-primary/20">

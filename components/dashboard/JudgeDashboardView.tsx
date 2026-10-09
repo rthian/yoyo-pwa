@@ -16,6 +16,7 @@ import {
 import type { Member } from '@/lib/types/database'
 import { formatCountryWithFlag } from '@/lib/utils/country-flags'
 import JudgeDashboardHeader from '@/components/shared/JudgeDashboardHeader'
+import OrganizeEntryCard from '@/components/organize/OrganizeEntryCard'
 
 interface JudgeDashboardViewProps {
   member: Member
@@ -38,6 +39,8 @@ export default function JudgeDashboardView({ member }: JudgeDashboardViewProps) 
               Ready to score some amazing freestyles
             </p>
           </div>
+
+          <OrganizeEntryCard />
 
           {/* Primary Action */}
           <Card className="mb-8 border-primary/20 bg-primary/5">

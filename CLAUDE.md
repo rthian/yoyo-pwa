@@ -81,9 +81,10 @@ middleware.ts           # Route protection: /admin, /judge, /member require auth
 ### Route Groups & Layouts
 
 Routes are organized in Next.js [route groups](https://nextjs.org/docs/app/building-your-application/routing/route-groups):
-- `(admin)` — admin layout wrapping all admin pages
+- `(admin)` — admin layout wrapping all admin pages (global `admin` role only)
 - `(judge)` — judge layout (mobile-first, bottom nav)
 - `(member)` — member layout
+- `(organizer)` — `/organize` event-ops for accounts with `event_staff_roles` (or admin); no league/member admin nav
 
 The root `app/page.tsx` checks the user's role and redirects to the appropriate dashboard using the `RoleDashboard` component with `dynamic = 'force-dynamic'`.
 
@@ -161,6 +162,7 @@ Applied in order from `supabase/migrations/`:
 12. `018_music_stage_ops.sql` — Prompt 11: backup_status + display_filename for stage ops
 13. `019_published_results.sql` — Prompt 12: `results_published_at` + audit; official results from `division_results`
 14. `020_external_media.sql` — Prompt 13: `event_external_media` curated external links (embeds later)
+15. Prompt 16 (no migration): `/organize` self-service event ops for staff; `lib/organize/access.ts` + `GET /api/organize/events`
 
 ---
 
