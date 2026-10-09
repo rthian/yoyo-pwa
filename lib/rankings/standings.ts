@@ -101,9 +101,19 @@ export async function snapshotDivisionResults(
 
   if (!standings.length) return 0
 
+  // Slice B: dual-write competitor_id (trigger also fills if omitted)
+  const { mapCompetitorIdsForMembers } = await import(
+    '@/lib/identity/competitors'
+  )
+  const competitorByMember = await mapCompetitorIdsForMembers(
+    supabase,
+    standings.map((s) => s.memberId)
+  )
+
   const rows = standings.map((s) => ({
     division_id: divisionId,
     member_id: s.memberId,
+    competitor_id: competitorByMember.get(s.memberId) ?? null,
     placement: s.placement,
     total_score: s.scoreCount > 0 ? s.totalScore : null,
     score_count: s.scoreCount,

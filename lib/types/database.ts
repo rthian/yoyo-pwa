@@ -358,6 +358,8 @@ export interface DivisionMember {
   id: string
   division_id: string
   member_id: string
+  /** Slice B dual key — nullable until Slice D */
+  competitor_id?: string | null
   play_order: number | null
   status: DivisionMemberStatus
   created_at: string

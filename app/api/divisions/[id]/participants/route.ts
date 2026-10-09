@@ -90,11 +90,20 @@ export async function POST(
 
     const body = await request.json()
 
+    // Slice B dual-write: competitor_id (+ DB trigger fills if omitted)
+    const { getCompetitorIdForMember } = await import(
+      '@/lib/identity/competitors'
+    )
+    const competitorId = body.member_id
+      ? await getCompetitorIdForMember(auth.supabaseAdmin, body.member_id)
+      : null
+
     const { data, error } = await auth.supabaseAdmin
       .from('division_members')
       .insert({
         division_id: divisionId,
         member_id: body.member_id,
+        competitor_id: competitorId,
         play_order: body.play_order || 1,
       })
       .select()

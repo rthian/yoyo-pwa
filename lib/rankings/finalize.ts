@@ -232,6 +232,15 @@ export async function finalizeEventPoints(
     }
   }
 
+  // Slice B: dual-write competitor_id on ranking_points
+  const { mapCompetitorIdsForMembers } = await import(
+    '@/lib/identity/competitors'
+  )
+  const competitorByMember = await mapCompetitorIdsForMembers(
+    supabase,
+    [...bestByKey.values()].map((a) => a.memberId)
+  )
+
   const awards = [...bestByKey.values()].map((a) => {
     const base = lookupBasePoints(pointsRows, a.roundType, a.placement)
     const points = Math.round((base + 0) * multiplier * 100) / 100
@@ -240,6 +249,7 @@ export async function finalizeEventPoints(
       event_id: eventId,
       category_id: a.categoryId,
       member_id: a.memberId,
+      competitor_id: competitorByMember.get(a.memberId) ?? null,
       division_id: a.divisionId,
       round_type: a.roundType,
       placement: a.placement,
