@@ -1,8 +1,7 @@
 /**
- * Prompt 13: external media URL helpers (no embeds — Prompt 15).
- * Callers: app/api/events/[id]/media/route.ts, components/admin/EventMediaPanel.tsx
- * Glob: no prior lib/media/external.ts
- * User: "prompt 13"
+ * Prompt 13: external media URL helpers.
+ * Embeds: lib/media/embed.ts + components/media/MediaEmbed.tsx (Prompt 14–15).
+ * Callers: media API, EventMediaPanel, MediaEmbed.
  */
 
 export type ExternalMediaKind =

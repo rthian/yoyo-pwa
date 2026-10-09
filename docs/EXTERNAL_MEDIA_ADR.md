@@ -4,8 +4,8 @@ Curated **external** media links for events (YouTube, Vimeo, Twitch, Instagram, 
 
 ## Scope
 
-**In:** store/validate/list public links; admin CRUD; hub Media tab as outbound links.  
-**Out (Prompt 15):** iframes, oEmbed players, autoplay embeds.
+**In (Prompt 13):** store/validate/list public links; admin CRUD; hub Media tab.  
+**In (Prompt 14–15):** allowlisted embed URLs + click-to-load iframe players (YouTube privacy-enhanced, Vimeo, Twitch with `parent`). Instagram/other remain outbound links. No autoplay.
 
 ## Model
 

@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { ExternalLink, Loader2, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import MediaEmbed from '@/components/media/MediaEmbed'
 import {
   EXTERNAL_MEDIA_KINDS,
   kindLabel,
@@ -50,6 +51,7 @@ export default function EventMediaPanel({ eventId }: EventMediaPanelProps) {
   const [url, setUrl] = useState('')
   const [kind, setKind] = useState<ExternalMediaKind>('highlight')
   const [isPublic, setIsPublic] = useState(true)
+  const [previewId, setPreviewId] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
@@ -133,8 +135,8 @@ export default function EventMediaPanel({ eventId }: EventMediaPanelProps) {
       <div className="rounded-lg border p-4 space-y-3">
         <h3 className="font-medium text-sm">Add external link</h3>
         <p className="text-xs text-muted-foreground">
-          YouTube, Vimeo, Twitch, Instagram, or any https URL. Players/embeds come later
-          (Prompt 15).
+          YouTube, Vimeo, and Twitch play inline on the public hub (click to load).
+          Instagram and other URLs open externally.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
@@ -205,32 +207,41 @@ export default function EventMediaPanel({ eventId }: EventMediaPanelProps) {
           No external media links yet.
         </p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {rows.map((r) => (
-            <li
-              key={r.id}
-              className="flex flex-wrap items-center gap-2 border rounded-md p-3"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="font-medium truncate">{r.title}</div>
-                <a
-                  href={r.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-primary underline truncate inline-flex items-center gap-1"
+            <li key={r.id} className="border rounded-md p-3 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium truncate">{r.title}</div>
+                  <a
+                    href={r.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary underline truncate inline-flex items-center gap-1"
+                  >
+                    {r.url}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+                <Badge variant="outline">{kindLabel(r.kind)}</Badge>
+                <Badge variant="secondary">{providerLabel(r.provider)}</Badge>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    setPreviewId((id) => (id === r.id ? null : r.id))
+                  }
                 >
-                  {r.url}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
+                  {previewId === r.id ? 'Hide preview' : 'Preview'}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => togglePublic(r)}>
+                  {r.is_public ? 'Public' : 'Hidden'}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => remove(r.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
-              <Badge variant="outline">{kindLabel(r.kind)}</Badge>
-              <Badge variant="secondary">{providerLabel(r.provider)}</Badge>
-              <Button size="sm" variant="ghost" onClick={() => togglePublic(r)}>
-                {r.is_public ? 'Public' : 'Hidden'}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => remove(r.id)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {previewId === r.id && <MediaEmbed item={r} />}
             </li>
           ))}
         </ul>
