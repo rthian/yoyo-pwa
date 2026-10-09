@@ -184,6 +184,20 @@ export async function getCompetitorIdForMember(
   return link?.competitor_id ?? null
 }
 
+/** All competitor ids an account manages (any relationship). */
+export async function getCompetitorIdsForAccount(
+  supabase: SupabaseClient,
+  accountId: string
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('account_competitor_links')
+    .select('competitor_id')
+    .eq('account_id', accountId)
+
+  if (error) throw new Error(error.message)
+  return [...new Set((data ?? []).map((r) => r.competitor_id).filter(Boolean))]
+}
+
 /**
  * Slice B: map member ids → competitor ids (missing links omitted).
  */

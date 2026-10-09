@@ -70,7 +70,9 @@ async function gatherFinalizeSoftFacts(
 
     const { data: participants } = await supabaseAdmin
       .from('division_members')
-      .select('id, member:members(full_name)')
+      .select(
+        'id, competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)'
+      )
       .eq('division_id', div.id)
 
     const { data: scoresRows } = await supabaseAdmin
@@ -95,9 +97,9 @@ async function gatherFinalizeSoftFacts(
 
     const names = new Map<string, string>()
     for (const p of participants ?? []) {
-      const raw = p.member as { full_name: string } | { full_name: string }[] | null
-      const m = Array.isArray(raw) ? raw[0] : raw
-      names.set(p.id, m?.full_name ?? 'Unknown')
+      const raw = p.competitor as { full_name: string } | { full_name: string }[] | null
+      const c = Array.isArray(raw) ? raw[0] : raw
+      names.set(p.id, c?.full_name ?? 'Unknown')
     }
     const stats = computeParticipantPanelStats(scores)
     totalOutliersAcrossLocked += computeOutliers(scores, stats, names).length

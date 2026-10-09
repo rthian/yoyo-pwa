@@ -76,7 +76,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const { data: participants } = await auth.supabaseAdmin
       .from('division_members')
-      .select('id, member:members(id, full_name)')
+      .select(
+        'id, competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)'
+      )
       .eq('division_id', divisionId)
 
     const { data: judgesRows } = await auth.supabaseAdmin
@@ -169,12 +171,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const participantNames = new Map<string, string>()
     for (const p of participants ?? []) {
-      const raw = p.member as
+      const raw = p.competitor as
         | { id: string; full_name: string }
         | { id: string; full_name: string }[]
         | null
-      const member = Array.isArray(raw) ? raw[0] : raw
-      participantNames.set(p.id, member?.full_name ?? 'Unknown')
+      const competitor = Array.isArray(raw) ? raw[0] : raw
+      participantNames.set(p.id, competitor?.full_name ?? 'Unknown')
     }
 
     const panelStats = computeParticipantPanelStats(countingScores)

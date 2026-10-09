@@ -5,6 +5,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
+import { getCompetitorIdsForAccount } from '@/lib/identity/competitors'
 
 export async function GET() {
   try {
@@ -20,7 +21,12 @@ export async function GET() {
       )
     }
 
-    // Find all division_members entries for this user
+    const competitorIds = await getCompetitorIdsForAccount(supabaseAdmin, user.id)
+    if (!competitorIds.length) {
+      return NextResponse.json({ events: [] })
+    }
+
+    // Find all division_members entries for this account's competitors
     const { data: memberships, error: memberError } = await supabaseAdmin
       .from('division_members')
       .select(`
@@ -45,7 +51,7 @@ export async function GET() {
           )
         )
       `)
-      .eq('member_id', user.id)
+      .in('competitor_id', competitorIds)
       .order('created_at', { ascending: false })
 
     if (memberError) {

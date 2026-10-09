@@ -73,7 +73,7 @@ export default async function ScoringPage({ params }: ScoringPageProps) {
     .from('division_members')
     .select(`
       *,
-      member:members(id, full_name, nickname, country)
+      competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)
     `)
     .eq('id', participantId)
     .eq('division_id', divisionId)
@@ -95,7 +95,7 @@ export default async function ScoringPage({ params }: ScoringPageProps) {
     .select(`
       id,
       play_order,
-      member:members(full_name)
+      competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)
     `)
     .eq('division_id', divisionId)
     .order('play_order', { ascending: true })
@@ -114,11 +114,11 @@ export default async function ScoringPage({ params }: ScoringPageProps) {
   )
 
   const queueItems = (allMembers ?? []).map((m) => {
-    const raw = m.member as
+    const raw = m.competitor as
       | { full_name: string }
       | { full_name: string }[]
       | null
-    const member = Array.isArray(raw) ? raw[0] : raw
+    const competitor = Array.isArray(raw) ? raw[0] : raw
     const hasScore = (myScores ?? []).some((s) => s.division_member_id === m.id)
     const status = submittedIds.has(m.id)
       ? ('submitted' as const)
@@ -131,7 +131,7 @@ export default async function ScoringPage({ params }: ScoringPageProps) {
       eventName: '',
       eventDate: null,
       divisionMemberId: m.id,
-      participantName: member?.full_name ?? 'Unknown',
+      participantName: competitor?.full_name ?? 'Unknown',
       nickname: null,
       playOrder: m.play_order,
       status,

@@ -75,7 +75,7 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
     .from('division_members')
     .select(`
       *,
-      member:members(id, full_name, nickname, country)
+      competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)
     `)
     .eq('division_id', divisionId)
     .order('play_order', { ascending: true })
@@ -111,8 +111,8 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
       eventName: division.event?.name ?? '',
       eventDate: division.event?.event_date ?? null,
       divisionMemberId: p.id,
-      participantName: p.member?.full_name ?? 'Unknown',
-      nickname: p.member?.nickname ?? null,
+      participantName: p.competitor?.full_name ?? 'Unknown',
+      nickname: p.competitor?.nickname ?? null,
       playOrder: p.play_order ?? index + 1,
       status,
       totalScore: score?.total_score != null ? Number(score.total_score) : null,
@@ -237,17 +237,17 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
                         {/* Participant info */}
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold truncate">
-                            {participant.member?.full_name}
+                            {participant.competitor?.full_name}
                           </p>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             {isUpNext && !isScored && (
                               <span className="text-primary font-medium">Up next</span>
                             )}
-                            {participant.member?.nickname && (
-                              <span>"{participant.member.nickname}"</span>
+                            {participant.competitor?.nickname && (
+                              <span>"{participant.competitor.nickname}"</span>
                             )}
-                            {participant.member?.country && (
-                              <span>• {participant.member.country}</span>
+                            {participant.competitor?.country && (
+                              <span>• {participant.competitor.country}</span>
                             )}
                           </div>
                         </div>

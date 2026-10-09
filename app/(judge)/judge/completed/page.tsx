@@ -25,7 +25,7 @@ export default async function JudgeCompletedPage() {
       *,
       division_member:division_members(
         id,
-        member:members(full_name, nickname)
+        competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)
       ),
       division:divisions(
         id,
@@ -74,7 +74,7 @@ export default async function JudgeCompletedPage() {
                   <CardContent className="flex items-center gap-4 p-4">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold truncate">
-                        {score.division_member?.member?.full_name}
+                        {score.division_member?.competitor?.full_name}
                       </p>
                       <p className="text-sm text-muted-foreground truncate">
                         {score.division?.name}

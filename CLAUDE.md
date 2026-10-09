@@ -155,6 +155,7 @@ Applied in order from `supabase/migrations/`:
 5b. `021_identity_slice_b_dual_columns.sql` — Slice B: nullable `competitor_id` dual keys + backfill + fill trigger (see `docs/IDENTITY_ADR.md`)
 5c. Prompt 2 Slice C (no migration): public profile/rankings/search read via `competitors`
 5d. `022_identity_slice_d1_competitor_required.sql` — Slice D1: NOT NULL `competitor_id`, nullable `member_id`, competitor uniques
+5e. `023_identity_slice_d2_drop_member_id.sql` — Slice D2: drop `member_id` on competition tables; competitor-only enrollment
 6. `012_event_staff_roles.sql` — Prompt 3: `event_staff_roles` + audit + capability helpers; APIs use `lib/auth/event-permissions.ts`
 7. `013_event_timing.sql` — Prompt 4: TIMESTAMPTZ windows, venue/address, keeps `event_date`
 8. `014_registrations.sql` — Prompt 5: registrations + entries + audit; sync confirmed → division_members; capacity/waitlist

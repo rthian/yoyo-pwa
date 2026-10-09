@@ -19,14 +19,19 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { GripVertical, Trash2 } from 'lucide-react'
-import type { Member, DivisionMember, DivisionMemberStatus } from '@/lib/types/database'
+import type { Competitor, DivisionMember, DivisionMemberStatus } from '@/lib/types/database'
 
-interface ParticipantWithMember extends DivisionMember {
-  member: Member
+type CompetitorEmbed = Pick<
+  Competitor,
+  'id' | 'full_name' | 'nickname' | 'country' | 'public_id' | 'source_member_id'
+>
+
+interface ParticipantWithCompetitor extends DivisionMember {
+  competitor: CompetitorEmbed
 }
 
 interface SortableParticipantRowProps {
-  participant: ParticipantWithMember
+  participant: ParticipantWithCompetitor
   index: number
   statusOptions: { value: DivisionMemberStatus; label: string }[]
   onStatusChange: (participantId: string, status: DivisionMemberStatus) => void
@@ -64,9 +69,9 @@ export default function SortableParticipantRow({
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </TableCell>
       <TableCell className="font-medium tabular-nums w-12">{index + 1}</TableCell>
-      <TableCell>{participant.member.full_name}</TableCell>
+      <TableCell>{participant.competitor.full_name}</TableCell>
       <TableCell className="text-muted-foreground">
-        {participant.member.email}
+        {participant.competitor.country ?? '—'}
       </TableCell>
       <TableCell>
         <Select

@@ -44,7 +44,7 @@ export async function GET(
       .from('division_members')
       .select(`
         *,
-        member:members(*)
+        competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)
       `)
       .eq('division_id', divisionId)
       .order('play_order', { ascending: true })
@@ -53,8 +53,15 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const participantIds =
-      participants?.map((p: { member_id: string }) => p.member_id) || []
+    type CompetitorEmbed = { source_member_id?: string | null } | null
+    const enrolledAccountIds = (participants ?? [])
+      .map((p) => {
+        const raw = (p as { competitor?: CompetitorEmbed | CompetitorEmbed[] })
+          .competitor
+        const c = Array.isArray(raw) ? raw[0] : raw
+        return c?.source_member_id ?? null
+      })
+      .filter((id): id is string => Boolean(id))
 
     const query = auth.supabaseAdmin
       .from('members')
@@ -63,8 +70,8 @@ export async function GET(
       .eq('role', 'member')
       .order('full_name', { ascending: true })
 
-    if (participantIds.length > 0) {
-      query.not('id', 'in', `(${participantIds.join(',')})`)
+    if (enrolledAccountIds.length > 0) {
+      query.not('id', 'in', `(${enrolledAccountIds.join(',')})`)
     }
 
     const { data: availableMembers } = await query
@@ -126,7 +133,6 @@ export async function POST(
       .from('division_members')
       .insert({
         division_id: divisionId,
-        member_id: body.member_id,
         competitor_id: competitorId,
         play_order: body.play_order || 1,
       })

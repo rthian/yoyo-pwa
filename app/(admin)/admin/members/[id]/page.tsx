@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Edit, Mail, Globe, Calendar, Trophy } from 'lucide-react'
+import { getCompetitorIdsForAccount } from '@/lib/identity/competitors'
 
 interface MemberDetailPageProps {
   params: Promise<{ id: string }>
@@ -28,18 +29,21 @@ export default async function MemberDetailPage({ params }: MemberDetailPageProps
     notFound()
   }
 
-  // Get participation history
-  const { data: participations } = await supabase
-    .from('division_members')
-    .select(`
+  // Get participation history via account's competitors
+  const competitorIds = await getCompetitorIdsForAccount(supabase, id)
+  const { data: participations } = competitorIds.length
+    ? await supabase
+        .from('division_members')
+        .select(`
       *,
       division:divisions(
         name,
         event:events(id, name, event_date, status)
       )
     `)
-    .eq('member_id', id)
-    .order('created_at', { ascending: false })
+        .in('competitor_id', competitorIds)
+        .order('created_at', { ascending: false })
+    : { data: [] as never[] }
 
   // Get judging assignments
   const { data: judgeAssignments } = await supabase

@@ -39,8 +39,7 @@ type AggCompetitor = {
 }
 
 type PointsRow = {
-  member_id: string
-  competitor_id: string | null
+  competitor_id: string
   points: number | string
   field_scope: string | null
   event_id: string
@@ -156,7 +155,6 @@ export async function getLeagueRankings(
     .from('ranking_points')
     .select(
       `
-      member_id,
       competitor_id,
       points,
       field_scope,
@@ -230,7 +228,7 @@ export async function getLeagueRankings(
     )
     competitorById.set(competitorId, {
       competitorId,
-      memberId: c.source_member_id ?? r.member_id ?? null,
+      memberId: c.source_member_id ?? null,
       full_name: c.full_name,
       nickname: c.nickname,
       country: c.country,

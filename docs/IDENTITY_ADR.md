@@ -1,6 +1,6 @@
 # Account vs Competitor Identity
 
-**Status:** Slice A–C + D1 shipped · D2/E deferred  
+**Status:** Slice A–D2 shipped · E deferred  
 **Referenced by:** `CLAUDE.md` migrations, `lib/identity/competitors.ts`, `021_identity_slice_b_dual_columns.sql`  
 **Glob:** no prior docs/IDENTITY_ADR.md  
 **User:** "yes"
@@ -36,12 +36,18 @@
 - `member_id` becomes nullable; uniqueness moves to `(division_id, competitor_id)` / `(event_id, category_id, competitor_id)`.
 - Registration RPC upserts on competitor keys (guardian-only competitors can enroll).
 - View `public_competitors` added; `public_members` kept for compatibility.
-- **D2** (drop `member_id`) still deferred until embeds / my-events queries cut over.
+
+## Slice D2 notes (`023`)
+
+- App cutover: `division_members` embeds → `competitor:competitors`; my-* filters use `getCompetitorIdsForAccount`.
+- Migration drops `member_id` on the five tables; drops fill triggers; RPC inserts competitor-only.
+- `division_judges.member_id` and `scores.judge_id` unchanged (Auth accounts).
+- **E** (strip competition columns from `members`) still deferred.
 
 ## Slice C notes (no migration)
 
 - Public profile (`lib/rankings/profile.ts`), rankings (`lib/rankings/query.ts`), and search (`lib/search/query.ts`) resolve display identity from `competitors`.
-- Ledger queries prefer `competitor_id`; fall back to `member_id` when dual rows are incomplete.
+- Ledger queries use `competitor_id` (D2: no `member_id` fallback on ranking tables).
 - Profile PATCH dual-updates the self-linked `competitors` row so public pages stay in sync.
 - Rankings `memberId` remains `source_member_id` for “my standing” focus; `competitorId` is also returned.
 - Rollback: point those three libs back at `members` embeds.

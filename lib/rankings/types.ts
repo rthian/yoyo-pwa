@@ -108,7 +108,7 @@ export interface PointsTableRow {
 export interface DivisionResult {
   id: string
   division_id: string
-  member_id: string
+  competitor_id: string
   placement: number | null
   total_score: number | null
   score_count: number
@@ -121,7 +121,7 @@ export interface RankingPoints {
   season_id: string
   event_id: string
   category_id: string
-  member_id: string
+  competitor_id: string
   division_id: string | null
   round_type: string
   placement: number | null

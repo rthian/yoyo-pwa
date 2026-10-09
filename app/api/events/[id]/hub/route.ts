@@ -12,6 +12,7 @@ import {
   formatInTimeZone,
   getRegistrationAvailability,
 } from '@/lib/events/timing'
+import { getCompetitorIdsForAccount } from '@/lib/identity/competitors'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -71,6 +72,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     // Callers: EventHubClient — media rows: { id, title, url, kind, provider }
     // User: "prompt 13"
+    const myCompetitorIds = user
+      ? await getCompetitorIdsForAccount(admin, user.id)
+      : []
+
     const [
       { data: counts },
       { data: registrations },
@@ -81,11 +86,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
       divisionIds.length
         ? admin.from('division_members').select('division_id').in('division_id', divisionIds)
         : Promise.resolve({ data: [] as { division_id: string }[] }),
-      user && divisionIds.length
+      user && divisionIds.length && myCompetitorIds.length
         ? admin
             .from('division_members')
             .select('division_id')
-            .eq('member_id', user.id)
+            .in('competitor_id', myCompetitorIds)
             .in('division_id', divisionIds)
         : Promise.resolve({ data: [] as { division_id: string }[] }),
       admin

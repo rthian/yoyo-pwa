@@ -302,16 +302,36 @@ async function main() {
 
       if (divErr || !division) throw new Error(divErr?.message || 'Division create failed')
 
-      const dmRows = entrants.map((p, idx) => ({
-        division_id: division.id,
-        member_id: p.id,
-        play_order: idx + 1,
-        status: 'completed',
-      }))
+      // Callers: manual `npx tsx scripts/seed-demo-rankings.ts` only
+      // Glob: scripts/seed-demo-rankings.ts exists; no alternate demo seed
+      // Sample: division_members { competitor_id: "comp_demo", play_order: 1 }
+      // User: "next"
+      const { data: competitorRows } = await sb
+        .from('competitors')
+        .select('id, source_member_id')
+        .in(
+          'source_member_id',
+          entrants.map((p) => p.id)
+        )
+      const competitorByMember = new Map(
+        (competitorRows ?? []).map((c) => [c.source_member_id as string, c.id])
+      )
+      const dmRows = entrants.map((p, idx) => {
+        const competitorId = competitorByMember.get(p.id)
+        if (!competitorId) {
+          throw new Error(`No competitor for member ${p.id} — apply identity migrations`)
+        }
+        return {
+          division_id: division.id,
+          competitor_id: competitorId,
+          play_order: idx + 1,
+          status: 'completed',
+        }
+      })
       const { data: dms, error: dmErr } = await sb
         .from('division_members')
         .insert(dmRows)
-        .select('id, member_id')
+        .select('id, competitor_id')
       if (dmErr) throw new Error(dmErr.message)
 
       const { data: admin } = await sb

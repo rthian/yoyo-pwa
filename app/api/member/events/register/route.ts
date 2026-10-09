@@ -8,7 +8,7 @@ import {
   cancelRegistration,
   registerSelfForDivision,
 } from '@/lib/registration/service'
-import { getCompetitorIdForMember } from '@/lib/identity/competitors'
+import { getCompetitorIdsForAccount, getCompetitorIdForMember } from '@/lib/identity/competitors'
 
 export async function POST(request: Request) {
   try {
@@ -130,11 +130,16 @@ export async function POST(request: Request) {
       }
     }
 
+    const competitorIds = await getCompetitorIdsForAccount(supabaseAdmin, user.id)
+    if (!competitorIds.length) {
+      return NextResponse.json({ message: 'Successfully unregistered', registered: false })
+    }
+
     const { error: deleteError } = await supabaseAdmin
       .from('division_members')
       .delete()
       .eq('division_id', division_id)
-      .eq('member_id', user.id)
+      .in('competitor_id', competitorIds)
 
     if (deleteError) {
       return NextResponse.json({ error: deleteError.message }, { status: 500 })

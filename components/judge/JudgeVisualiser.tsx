@@ -63,7 +63,7 @@ interface JudgeVisualiserProps {
 
 function getParticipantLabel(p: VisualiserParticipant, index: number): string {
   const order = p.play_order ?? index + 1
-  const name = p.member?.full_name ?? 'Unknown'
+  const name = p.competitor?.full_name ?? 'Unknown'
   return `${order}. ${name.split(' ')[0] ?? name}`
 }
 
@@ -231,7 +231,7 @@ export default function JudgeVisualiser({ divisionId }: JudgeVisualiserProps) {
 
   const participantComparisonData = participants.map((p, index) => {
     const label = getParticipantLabel(p, index)
-    const point: Record<string, string | number | boolean> = { name: label, fullName: p.member?.full_name ?? '' }
+    const point: Record<string, string | number | boolean> = { name: label, fullName: p.competitor?.full_name ?? '' }
     for (const j of judges) {
       const s = scores.find(
         (sc) => sc.division_member_id === p.id && sc.judge_id === j.id

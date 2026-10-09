@@ -44,10 +44,13 @@ import {
   majorsAreSeparate,
   type ScoringConfigLike,
 } from '@/lib/judge/score-math'
-import type { Division, DivisionMember, Score, Member, Ruleset, ScoringType } from '@/lib/types/database'
+import type { Division, DivisionMember, Score, Competitor, Ruleset, ScoringType } from '@/lib/types/database'
 
-interface ParticipantWithMember extends DivisionMember {
-  member: Member
+interface ParticipantWithCompetitor extends DivisionMember {
+  competitor: Pick<
+    Competitor,
+    'id' | 'full_name' | 'nickname' | 'country' | 'public_id' | 'source_member_id'
+  >
 }
 
 type JudgeRuleset = Pick<
@@ -67,7 +70,7 @@ interface DivisionWithEvent extends Division {
 
 interface ScoringFormProps {
   division: DivisionWithEvent
-  participant: ParticipantWithMember
+  participant: ParticipantWithCompetitor
   existingScore: Score | null
   judgeId: string
   nextParticipant?: {
@@ -282,7 +285,7 @@ export default function ScoringForm({
             </Button>
           </Link>
           <div className="flex-1 min-w-0">
-            <h1 className="text-base font-bold truncate">{participant.member.full_name}</h1>
+            <h1 className="text-base font-bold truncate">{participant.competitor.full_name}</h1>
             <p className="text-xs text-muted-foreground truncate">
               {division.name}
               {participant.play_order != null ? ` · #${participant.play_order}` : ''}
@@ -328,10 +331,10 @@ export default function ScoringForm({
                 <User className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-lg">{participant.member.full_name}</p>
-                {participant.member.nickname && (
+                <p className="font-bold text-lg">{participant.competitor.full_name}</p>
+                {participant.competitor.nickname && (
                   <p className="text-muted-foreground">
-                    &quot;{participant.member.nickname}&quot;
+                    &quot;{participant.competitor.nickname}&quot;
                   </p>
                 )}
               </div>
@@ -527,7 +530,7 @@ export default function ScoringForm({
                   <AlertDialogDescription asChild>
                     <div className="text-muted-foreground text-sm text-left space-y-2">
                       <span className="block font-semibold text-foreground">
-                        {participant.member.full_name}
+                        {participant.competitor.full_name}
                       </span>
                       <div className="mt-3 p-3 bg-muted rounded-lg space-y-1 text-sm">
                         <div className="flex justify-between">

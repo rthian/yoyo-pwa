@@ -84,14 +84,25 @@ async function main() {
     .limit(1)
     .maybeSingle()
 
-  if (anyMember && cat && anyEvent) {
+  // Callers: manual smoke only. Glob: scripts/smoke-rankings-races.ts exists.
+  // Sample ranking_points: { competitor_id: "comp_demo", field_scope: "invitational" }
+  // User: "next"
+  const { data: anyCompetitor } = anyMember
+    ? await sb
+        .from('competitors')
+        .select('id')
+        .eq('source_member_id', anyMember.id)
+        .maybeSingle()
+    : { data: null }
+
+  if (anyCompetitor && cat && anyEvent) {
     const { data: inserted, error: insErr } = await sb
       .from('ranking_points')
       .insert({
         season_id: seasonId,
         event_id: anyEvent.id,
         category_id: cat.id,
-        member_id: anyMember.id,
+        competitor_id: anyCompetitor.id,
         round_type: 'final',
         placement: 1,
         field_size: 1,
@@ -123,9 +134,12 @@ async function main() {
         limit: 500,
       })
       const inNational = afterNat.entries.some(
-        (e) => e.memberId === anyMember.id && e.totalPoints >= 9999
+        (e) =>
+          e.competitorId === anyCompetitor.id && e.totalPoints >= 9999
       )
-      const inEventBoard = eventBoard.entries.some((e) => e.memberId === anyMember.id)
+      const inEventBoard = eventBoard.entries.some(
+        (e) => e.competitorId === anyCompetitor.id
+      )
 
       checks.push({
         name: 'invite_excluded_from_national_race',

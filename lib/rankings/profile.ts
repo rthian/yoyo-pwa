@@ -1,7 +1,7 @@
 /**
  * Player public profile — Slice C: resolve via competitors (not members).
  * Callers: app/api/players/[publicId]/route.ts, app/players/[publicId]/page.tsx
- * Ledger reads prefer competitor_id; fall back to member_id during dual period.
+ * Ledger reads use competitor_id only (Slice D2).
  * Glob: existing lib/rankings/profile.ts (rewrite)
  * Sample: public_id ZX905JYC → competitor row + ranking_points by competitor_id
  * User: "ok next"
@@ -121,12 +121,12 @@ export async function getPlayerProfile(
     geoName = geo?.name ?? null
   }
 
-  let { data: points } = await supabase
+  const { data: points } = await supabase
     .from('ranking_points')
     .select(
       `
       id, season_id, event_id, category_id, division_id, round_type, placement, field_size,
-      points, eligibility, event_date, competitor_id, member_id,
+      points, eligibility, event_date, competitor_id,
       event:events(id, name, tier_id),
       category:play_categories(code),
       season:seasons(slug, name)
@@ -134,23 +134,6 @@ export async function getPlayerProfile(
     )
     .eq('competitor_id', competitor.id)
     .order('event_date', { ascending: false })
-
-  if ((!points || points.length === 0) && competitor.source_member_id) {
-    const fallback = await supabase
-      .from('ranking_points')
-      .select(
-        `
-      id, season_id, event_id, category_id, division_id, round_type, placement, field_size,
-      points, eligibility, event_date, competitor_id, member_id,
-      event:events(id, name, tier_id),
-      category:play_categories(code),
-      season:seasons(slug, name)
-    `
-      )
-      .eq('member_id', competitor.source_member_id)
-      .order('event_date', { ascending: false })
-    points = fallback.data
-  }
 
   const tierIds = [
     ...new Set(
@@ -220,13 +203,13 @@ export async function getPlayerProfile(
     const [slug, code, name, seasonId, categoryId] = key.split('|')
     const { data: peers } = await supabase
       .from('ranking_points')
-      .select('competitor_id, member_id, points')
+      .select('competitor_id, points')
       .eq('season_id', seasonId)
       .eq('category_id', categoryId)
 
     const peerTotals = new Map<string, number>()
     for (const row of peers ?? []) {
-      const peerKey = row.competitor_id || row.member_id
+      const peerKey = row.competitor_id
       if (!peerKey) continue
       peerTotals.set(
         peerKey,
@@ -248,22 +231,12 @@ export async function getPlayerProfile(
     })
   }
 
-  let { data: titles } = await supabase
+  const { data: titles } = await supabase
     .from('season_titles')
     .select(
       'rank, title_kind, season:seasons(name), category:play_categories(code)'
     )
     .eq('competitor_id', competitor.id)
-
-  if ((!titles || titles.length === 0) && competitor.source_member_id) {
-    const fallback = await supabase
-      .from('season_titles')
-      .select(
-        'rank, title_kind, season:seasons(name), category:play_categories(code)'
-      )
-      .eq('member_id', competitor.source_member_id)
-    titles = fallback.data
-  }
 
   return {
     id: competitor.id,

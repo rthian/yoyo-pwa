@@ -7,7 +7,6 @@ import { createAdminClient } from '../lib/supabase/admin'
 import {
   assertManagesCompetitor,
   ensureSelfCompetitorForMember,
-  getCompetitorIdForMember,
   getManagedCompetitors,
 } from '../lib/identity/competitors'
 import { generateLeagueId } from '../lib/rankings/league-id'
@@ -43,17 +42,22 @@ async function main() {
     .select('*', { count: 'exact', head: true })
 
   if ((rpCount ?? 0) > 0) {
-    const { data: sample } = await sb.from('ranking_points').select('member_id').limit(20)
-    const memberIds = [...new Set((sample ?? []).map((r) => r.member_id))]
-    let missing = 0
-    for (const mid of memberIds) {
-      const cid = await getCompetitorIdForMember(sb, mid)
-      if (!cid) missing++
-    }
+    // Callers: npx tsx scripts/smoke-identity-slice-a.ts. Glob: existing file.
+    // Sample: { competitor_id: "comp_demo" }. User: "next"
+    const { data: sample } = await sb
+      .from('ranking_points')
+      .select('competitor_id')
+      .limit(20)
+    const competitorIds = [
+      ...new Set((sample ?? []).map((r) => r.competitor_id).filter(Boolean)),
+    ]
     checks.push({
       name: 'backfill_ranking_points_sample',
-      ok: missing === 0,
-      detail: { sampled: memberIds.length, missing },
+      ok: competitorIds.length === (sample ?? []).length,
+      detail: {
+        sampled: (sample ?? []).length,
+        withCompetitor: competitorIds.length,
+      },
     })
   } else {
     checks.push({

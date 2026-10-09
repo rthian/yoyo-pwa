@@ -83,7 +83,7 @@ export default async function JudgeQueuePage() {
         id,
         division_id,
         play_order,
-        member:members(full_name, nickname)
+        competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)
       `)
       .in('division_id', divisionIds)
       .order('play_order', { ascending: true })
@@ -111,11 +111,11 @@ export default async function JudgeQueuePage() {
     for (const row of members ?? []) {
       const div = divisionById.get(row.division_id)
       if (!div) continue
-      const rawMember = row.member as
+      const rawCompetitor = row.competitor as
         | { full_name: string; nickname: string | null }
         | { full_name: string; nickname: string | null }[]
         | null
-      const member = Array.isArray(rawMember) ? rawMember[0] : rawMember
+      const competitor = Array.isArray(rawCompetitor) ? rawCompetitor[0] : rawCompetitor
       const score = scoreByMember.get(row.id)
       let status: QueueItemStatus = 'pending'
       if (score?.is_submitted) status = 'submitted'
@@ -127,8 +127,8 @@ export default async function JudgeQueuePage() {
         eventName: div.eventName,
         eventDate: div.eventDate,
         divisionMemberId: row.id,
-        participantName: member?.full_name ?? 'Unknown',
-        nickname: member?.nickname ?? null,
+        participantName: competitor?.full_name ?? 'Unknown',
+        nickname: competitor?.nickname ?? null,
         playOrder: row.play_order,
         status,
         totalScore: score?.total_score != null ? Number(score.total_score) : null,

@@ -2,7 +2,7 @@
  * Award season ranking points from frozen division results (FIP-style).
  * Called by: app/api/admin/events/[id]/finalize/route.ts
  * No prior finalize.ts (Glob empty under lib/rankings).
- * Writes ranking_points: season_id, event_id, category_id, member_id, round_type,
+ * Writes ranking_points: season_id, event_id, category_id, competitor_id, round_type,
  *   placement, base_points, multiplier, points, event_date (YYYY-MM-DD).
  * User: create a branch… plan & build a ranking with point system league leaderboards…
  */
@@ -172,10 +172,10 @@ export async function finalizeEventPoints(
   }
 
   const divisionIds = divisions.map((d) => d.id)
-  // Slice D1: aggregate / award by competitor_id (member_id optional bridge)
+  // Slice D2: aggregate / award by competitor_id only
   const { data: results } = await supabase
     .from('division_results')
-    .select('division_id, member_id, competitor_id, placement, score_count')
+    .select('division_id, competitor_id, placement, score_count')
     .in('division_id', divisionIds)
 
   const competitorIds = [
@@ -188,27 +188,21 @@ export async function finalizeEventPoints(
   const { data: competitors } = competitorIds.length
     ? await supabase
         .from('competitors')
-        .select('id, home_geo_id, source_member_id')
+        .select('id, home_geo_id')
         .in('id', competitorIds)
     : {
         data: [] as {
           id: string
           home_geo_id: string | null
-          source_member_id: string | null
         }[],
       }
 
   const geoByCompetitor = new Map(
     (competitors ?? []).map((c) => [c.id, c.home_geo_id as string | null])
   )
-  const memberByCompetitor = new Map(
-    (competitors ?? []).map((c) => [c.id, c.source_member_id as string | null])
-  )
-
   type Agg = {
     categoryId: string
     competitorId: string
-    memberId: string | null
     divisionId: string
     roundType: PointsRoundType
     placement: number
@@ -241,8 +235,6 @@ export async function finalizeEventPoints(
       const candidate: Agg = {
         categoryId: div.category_id,
         competitorId,
-        memberId:
-          r.member_id || memberByCompetitor.get(competitorId) || null,
         divisionId: div.id,
         roundType,
         placement: r.placement as number,
@@ -268,7 +260,6 @@ export async function finalizeEventPoints(
       season_id: event.season_id!,
       event_id: eventId,
       category_id: a.categoryId,
-      member_id: a.memberId,
       competitor_id: a.competitorId,
       division_id: a.divisionId,
       round_type: a.roundType,

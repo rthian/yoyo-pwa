@@ -5,6 +5,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { getCompetitorIdsForAccount } from '@/lib/identity/competitors'
 
 export async function GET() {
   try {
@@ -46,11 +47,14 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Fetch user's existing registrations
-    const { data: registrations } = await supabaseAdmin
-      .from('division_members')
-      .select('division_id')
-      .eq('member_id', user.id)
+    // Fetch user's existing registrations via managed competitors
+    const competitorIds = await getCompetitorIdsForAccount(supabaseAdmin, user.id)
+    const { data: registrations } = competitorIds.length
+      ? await supabaseAdmin
+          .from('division_members')
+          .select('division_id')
+          .in('competitor_id', competitorIds)
+      : { data: [] as { division_id: string }[] }
 
     const registeredDivisionIds = new Set(
       (registrations || []).map(r => r.division_id)
