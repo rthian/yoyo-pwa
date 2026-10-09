@@ -15,7 +15,7 @@ export async function computeDivisionStandings(
 ): Promise<LeagueStandingsRow[]> {
   const { data: participants } = await supabase
     .from('division_members')
-    .select('id, member_id, play_order')
+    .select('id, member_id, competitor_id, play_order')
     .eq('division_id', divisionId)
     .order('play_order', { ascending: true })
 
@@ -59,7 +59,8 @@ export async function computeDivisionStandings(
     const totalScore =
       scoreCount > 0 ? vals.reduce((a, b) => a + b, 0) / scoreCount : 0
     return {
-      memberId: p.member_id,
+      memberId: p.member_id ?? null,
+      competitorId: p.competitor_id ?? null,
       totalScore: Math.round(totalScore * 100) / 100,
       scoreCount,
       placement: null,
@@ -80,10 +81,14 @@ export async function computeDivisionStandings(
     r.placement = lastRank
   })
 
-  const placementByMember = new Map(ranked.map((r) => [r.memberId, r.placement]))
+  const placementKey = (r: LeagueStandingsRow) =>
+    r.competitorId || r.memberId || ''
+  const placementByKey = new Map(
+    ranked.map((r) => [placementKey(r), r.placement])
+  )
   return rows.map((r) => ({
     ...r,
-    placement: placementByMember.get(r.memberId) ?? null,
+    placement: placementByKey.get(placementKey(r)) ?? null,
   }))
 }
 
@@ -101,27 +106,40 @@ export async function snapshotDivisionResults(
 
   if (!standings.length) return 0
 
-  // Slice B: dual-write competitor_id (trigger also fills if omitted)
+  // Slice D1: competitor_id is required unique key; member_id optional bridge
   const { mapCompetitorIdsForMembers } = await import(
     '@/lib/identity/competitors'
   )
+  const memberIds = standings
+    .map((s) => s.memberId)
+    .filter((id): id is string => Boolean(id))
   const competitorByMember = await mapCompetitorIdsForMembers(
     supabase,
-    standings.map((s) => s.memberId)
+    memberIds
   )
 
-  const rows = standings.map((s) => ({
-    division_id: divisionId,
-    member_id: s.memberId,
-    competitor_id: competitorByMember.get(s.memberId) ?? null,
-    placement: s.placement,
-    total_score: s.scoreCount > 0 ? s.totalScore : null,
-    score_count: s.scoreCount,
-    source: 'auto' as const,
-  }))
+  const rows = standings
+    .map((s) => {
+      const competitorId =
+        s.competitorId ||
+        (s.memberId ? competitorByMember.get(s.memberId) : null)
+      if (!competitorId) return null
+      return {
+        division_id: divisionId,
+        member_id: s.memberId,
+        competitor_id: competitorId,
+        placement: s.placement,
+        total_score: s.scoreCount > 0 ? s.totalScore : null,
+        score_count: s.scoreCount,
+        source: 'auto' as const,
+      }
+    })
+    .filter((r): r is NonNullable<typeof r> => r != null)
+
+  if (!rows.length) return 0
 
   const { error } = await supabase.from('division_results').upsert(rows, {
-    onConflict: 'division_id,member_id',
+    onConflict: 'division_id,competitor_id',
   })
 
   if (error) throw new Error(error.message)

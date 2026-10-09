@@ -157,7 +157,9 @@ export interface LeagueRankingEntry {
 }
 
 export interface LeagueStandingsRow {
-  memberId: string
+  /** Nullable after Slice D1; prefer competitorId */
+  memberId: string | null
+  competitorId?: string | null
   totalScore: number
   scoreCount: number
   placement: number | null

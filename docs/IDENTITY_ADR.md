@@ -1,6 +1,6 @@
 # Account vs Competitor Identity
 
-**Status:** Slice A–C shipped · D–E deferred  
+**Status:** Slice A–C + D1 shipped · D2/E deferred  
 **Referenced by:** `CLAUDE.md` migrations, `lib/identity/competitors.ts`, `021_identity_slice_b_dual_columns.sql`  
 **Glob:** no prior docs/IDENTITY_ADR.md  
 **User:** "yes"
@@ -18,7 +18,8 @@
 | **A** | `competitors` + `account_competitor_links` + backfill + helpers (`011`) |
 | **B** | Nullable `competitor_id` on `division_members`, `division_results`, `ranking_points`, `season_titles`, `member_privileges`; backfill; DB fill trigger; dual-write writers (`021`) |
 | **C** | Read cutover (profiles/rankings/search via competitors) |
-| **D** | NOT NULL `competitor_id`; drop member FKs on competition tables |
+| **D1** | NOT NULL `competitor_id`; nullable `member_id`; unique on competitor keys; `public_competitors` (`022`) |
+| **D2** | Drop `member_id` columns/FKs; switch remaining embeds to competitors |
 | **E** | Drop competition columns from `members` |
 
 ## Slice B notes
@@ -28,6 +29,14 @@
 - Registration confirm RPC writes both keys into `division_members`.
 - Sample dual row: `{ member_id: "acct_demo", competitor_id: "comp_demo" }`.
 - Rollback: drop `competitor_id` columns + trigger (do not rewrite `021`).
+
+## Slice D1 notes (`022`)
+
+- Requires zero NULL `competitor_id` on the five dual-key tables (migration raises otherwise).
+- `member_id` becomes nullable; uniqueness moves to `(division_id, competitor_id)` / `(event_id, category_id, competitor_id)`.
+- Registration RPC upserts on competitor keys (guardian-only competitors can enroll).
+- View `public_competitors` added; `public_members` kept for compatibility.
+- **D2** (drop `member_id`) still deferred until embeds / my-events queries cut over.
 
 ## Slice C notes (no migration)
 

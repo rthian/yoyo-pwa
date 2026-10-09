@@ -90,13 +90,37 @@ export async function POST(
 
     const body = await request.json()
 
-    // Slice B dual-write: competitor_id (+ DB trigger fills if omitted)
-    const { getCompetitorIdForMember } = await import(
-      '@/lib/identity/competitors'
+    // Slice D1: competitor_id required — ensure self competitor for account
+    const {
+      ensureSelfCompetitorForMember,
+      getCompetitorIdForMember,
+    } = await import('@/lib/identity/competitors')
+
+    if (!body.member_id) {
+      return NextResponse.json({ error: 'member_id required' }, { status: 400 })
+    }
+
+    let competitorId = await getCompetitorIdForMember(
+      auth.supabaseAdmin,
+      body.member_id
     )
-    const competitorId = body.member_id
-      ? await getCompetitorIdForMember(auth.supabaseAdmin, body.member_id)
-      : null
+    if (!competitorId) {
+      const { data: memberRow } = await auth.supabaseAdmin
+        .from('members')
+        .select(
+          'id, full_name, nickname, country, home_geo_id, gender, avatar_url, bio, profile_visibility, first_competed_on, public_id, is_active'
+        )
+        .eq('id', body.member_id)
+        .single()
+      if (!memberRow) {
+        return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+      }
+      const ensured = await ensureSelfCompetitorForMember(
+        auth.supabaseAdmin,
+        memberRow
+      )
+      competitorId = ensured.competitor.id
+    }
 
     const { data, error } = await auth.supabaseAdmin
       .from('division_members')

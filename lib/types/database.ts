@@ -357,9 +357,10 @@ export interface RegistrationAuditEvent {
 export interface DivisionMember {
   id: string
   division_id: string
-  member_id: string
-  /** Slice B dual key — nullable until Slice D */
-  competitor_id?: string | null
+  /** Slice D1: nullable Auth bridge (dropped in D2) */
+  member_id: string | null
+  /** Slice D1: required competition identity */
+  competitor_id: string
   play_order: number | null
   status: DivisionMemberStatus
   created_at: string
