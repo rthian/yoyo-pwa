@@ -159,6 +159,7 @@ Applied in order from `supabase/migrations/`:
 10. `016_score_revisions_idempotency.sql` — Prompt 7–8: score_revisions + score_version + client_submission_id
 11. `017_music_submissions.sql` — Prompt 10: music requirements/submissions/versions (private bucket `competition-music`)
 12. `018_music_stage_ops.sql` — Prompt 11: backup_status + display_filename for stage ops
+13. `019_published_results.sql` — Prompt 12: `results_published_at` + audit; official results from `division_results`
 
 ---
 

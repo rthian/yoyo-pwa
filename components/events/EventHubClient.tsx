@@ -1,9 +1,8 @@
 /**
- * Event hub UI: Register + Schedule + Boards for one contest.
+ * Event hub UI: Register + Schedule + Boards + official Results for one contest.
  * Called by: app/events/[id]/page.tsx
- * Fetches GET /api/events/[id]/hub; register via POST /api/member/events/register
- * Glob: no prior components/events/*
- * User: "yes" (start event hub)
+ * Fetches GET /api/events/[id]/hub; results via GET /api/events/[id]/results
+ * User: Start with the Playbook prompt 12
  */
 'use client'
 
@@ -29,7 +28,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-type TabId = 'register' | 'schedule' | 'boards'
+type TabId = 'register' | 'schedule' | 'boards' | 'results'
 
 interface HubDivision {
   id: string
@@ -97,6 +96,25 @@ interface HubPayload {
     viewsCount: number
     scoringLocked: boolean
   }[]
+  resultsPublished?: boolean
+  resultsPublishedAt?: string | null
+}
+
+type OfficialResults = {
+  eventName: string
+  publishedAt: string | null
+  divisions: Array<{
+    divisionId: string
+    divisionName: string
+    roundType: string | null
+    placements: Array<{
+      placement: number | null
+      totalScore: number | null
+      competitorName: string
+      publicId: string | null
+      country: string | null
+    }>
+  }>
 }
 
 const roundTypeLabels: Record<string, string> = {
@@ -145,7 +163,14 @@ function formatTime(dateStr: string | null) {
 }
 
 function parseTab(value: string | null): TabId {
-  if (value === 'schedule' || value === 'boards' || value === 'register') return value
+  if (
+    value === 'schedule' ||
+    value === 'boards' ||
+    value === 'register' ||
+    value === 'results'
+  ) {
+    return value
+  }
   return 'register'
 }
 
@@ -157,6 +182,8 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [registeringId, setRegisteringId] = useState<string | null>(null)
+  const [officialResults, setOfficialResults] = useState<OfficialResults | null>(null)
+  const [resultsLoading, setResultsLoading] = useState(false)
 
   const load = useCallback(async (opts?: { soft?: boolean }) => {
     try {
@@ -184,6 +211,32 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
   useEffect(() => {
     setTab(parseTab(searchParams.get('tab')))
   }, [searchParams])
+
+  useEffect(() => {
+    if (tab !== 'results' || !data?.resultsPublished) {
+      return
+    }
+    let cancelled = false
+    setResultsLoading(true)
+    fetch(`/api/events/${eventId}/results`)
+      .then(async (res) => {
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || 'Results unavailable')
+        if (!cancelled) setOfficialResults(json)
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          toast.error(err instanceof Error ? err.message : 'Failed to load results')
+          setOfficialResults(null)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setResultsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [tab, data?.resultsPublished, eventId])
 
   const onTabChange = (value: string) => {
     const next = parseTab(value)
@@ -340,10 +393,15 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
 
       <div className="container mx-auto px-4 py-6 max-w-3xl">
         <Tabs value={tab} onValueChange={onTabChange}>
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList
+            className={`grid w-full mb-6 ${data.resultsPublished ? 'grid-cols-4' : 'grid-cols-3'}`}
+          >
             <TabsTrigger value="register">Register</TabsTrigger>
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
             <TabsTrigger value="boards">Boards</TabsTrigger>
+            {data.resultsPublished && (
+              <TabsTrigger value="results">Results</TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="register" className="space-y-4">
@@ -601,6 +659,75 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
               )}
             </div>
           </TabsContent>
+
+          {data.resultsPublished && (
+            <TabsContent value="results" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Trophy className="h-4 w-4" />
+                    Official results
+                  </CardTitle>
+                  <CardDescription>
+                    Frozen standings published by the organizer
+                    {data.resultsPublishedAt
+                      ? ` · ${new Date(data.resultsPublishedAt).toLocaleString()}`
+                      : ''}
+                    . Live boards remain under Boards.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              {resultsLoading ? (
+                <div className="flex justify-center gap-2 py-8 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading results…
+                </div>
+              ) : !officialResults ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  Results unavailable.
+                </p>
+              ) : (
+                officialResults.divisions.map((div) => (
+                  <div key={div.divisionId} className="space-y-2">
+                    <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                      {div.divisionName}
+                      {div.roundType ? ` · ${roundTypeLabels[div.roundType] || div.roundType}` : ''}
+                    </h2>
+                    {div.placements.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No placements.</p>
+                    ) : (
+                      <Card>
+                        <CardContent className="p-0 divide-y">
+                          {div.placements.map((p) => (
+                            <div
+                              key={`${div.divisionId}-${p.publicId || p.competitorName}-${p.placement}`}
+                              className="flex items-center justify-between px-4 py-3 gap-3"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="w-8 text-sm font-semibold tabular-nums text-muted-foreground">
+                                  {p.placement ?? '—'}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="font-medium truncate">{p.competitorName}</p>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {[p.publicId, p.country].filter(Boolean).join(' · ')}
+                                  </p>
+                                </div>
+                              </div>
+                              <span className="text-sm font-medium tabular-nums">
+                                {p.totalScore != null ? p.totalScore.toFixed(2) : '—'}
+                              </span>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                ))
+              )}
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

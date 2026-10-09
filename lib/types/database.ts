@@ -228,6 +228,8 @@ export interface Event {
   tier_id?: string | null
   geo_id?: string | null
   created_by: string | null
+  results_published_at?: string | null
+  results_published_by?: string | null
   created_at: string
   updated_at: string
 }

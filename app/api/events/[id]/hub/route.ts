@@ -34,7 +34,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
          registration_opens_at, registration_closes_at, music_deadline_at,
          check_in_opens_at, check_in_closes_at,
          venue_name, address_line1, address_line2, city, region, postal_code, country_code,
-         website_url, organizer_contact_name, organizer_contact_email, organizer_contact_public`
+         website_url, organizer_contact_name, organizer_contact_email, organizer_contact_public,
+         results_published_at`
       )
       .eq('id', eventId)
       .single()
@@ -199,6 +200,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
       schedule,
       myBoards,
       publicBoards,
+      resultsPublished: Boolean(event.results_published_at),
+      resultsPublishedAt: event.results_published_at ?? null,
     })
   } catch (error) {
     console.error('Event hub error:', error)
