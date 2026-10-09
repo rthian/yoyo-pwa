@@ -21,6 +21,7 @@ import EventStatusActions from '@/components/admin/EventStatusActions'
 import DeleteEventButton from '@/components/admin/DeleteEventButton'
 import ScheduleManager from '@/components/admin/ScheduleManager'
 import FinalizeEventPanel from '@/components/admin/FinalizeEventPanel'
+import PublishResultsPanel from '@/components/admin/PublishResultsPanel'
 import EventStaffPanel from '@/components/admin/EventStaffPanel'
 import EventRegistrationsPanel from '@/components/admin/EventRegistrationsPanel'
 import EventTracksPanel from '@/components/admin/EventTracksPanel'
@@ -152,8 +153,11 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
         </Card>
       )}
 
-      {/* League points finalization */}
-      <FinalizeEventPanel eventId={id} />
+      {/* Official results publish + league points finalization */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <PublishResultsPanel eventId={id} />
+        <FinalizeEventPanel eventId={id} />
+      </div>
 
       {/* Divisions & Schedule Tabs */}
       <Tabs defaultValue={defaultTab}>
