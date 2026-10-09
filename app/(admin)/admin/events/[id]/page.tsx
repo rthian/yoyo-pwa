@@ -26,6 +26,7 @@ import EventStaffPanel from '@/components/admin/EventStaffPanel'
 import EventRegistrationsPanel from '@/components/admin/EventRegistrationsPanel'
 import EventTracksPanel from '@/components/admin/EventTracksPanel'
 import EventMusicOpsPanel from '@/components/admin/EventMusicOpsPanel'
+import EventMediaPanel from '@/components/admin/EventMediaPanel'
 import { formatInTimeZone } from '@/lib/events/timing'
 
 interface EventDetailPageProps {
@@ -40,6 +41,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
     'divisions',
     'tracks',
     'music',
+    'media',
     'schedule',
     'registrations',
     'staff',
@@ -165,6 +167,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
           <TabsTrigger value="divisions">Divisions</TabsTrigger>
           <TabsTrigger value="tracks">Tracks</TabsTrigger>
           <TabsTrigger value="music">Music ops</TabsTrigger>
+          <TabsTrigger value="media">Media</TabsTrigger>
           <TabsTrigger value="schedule">Schedule</TabsTrigger>
           <TabsTrigger value="registrations">Registrations</TabsTrigger>
           <TabsTrigger value="staff">Staff</TabsTrigger>
@@ -216,6 +219,20 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
             </CardHeader>
             <CardContent>
               <EventMusicOpsPanel eventId={id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="media">
+          <Card>
+            <CardHeader>
+              <CardTitle>External media</CardTitle>
+              <CardDescription>
+                Livestreams, highlights, and photo albums (links only — embeds later)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EventMediaPanel eventId={id} />
             </CardContent>
           </Card>
         </TabsContent>

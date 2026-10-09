@@ -160,6 +160,7 @@ Applied in order from `supabase/migrations/`:
 11. `017_music_submissions.sql` — Prompt 10: music requirements/submissions/versions (private bucket `competition-music`)
 12. `018_music_stage_ops.sql` — Prompt 11: backup_status + display_filename for stage ops
 13. `019_published_results.sql` — Prompt 12: `results_published_at` + audit; official results from `division_results`
+14. `020_external_media.sql` — Prompt 13: `event_external_media` curated external links (embeds later)
 
 ---
 

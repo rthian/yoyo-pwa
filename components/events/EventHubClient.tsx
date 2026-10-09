@@ -1,8 +1,8 @@
 /**
- * Event hub UI: Register + Schedule + Boards + official Results for one contest.
+ * Event hub UI: Register + Schedule + Boards + Results + Media.
  * Called by: app/events/[id]/page.tsx
  * Fetches GET /api/events/[id]/hub; results via GET /api/events/[id]/results
- * User: Start with the Playbook prompt 12
+ * User: "prompt 13"
  */
 'use client'
 
@@ -19,6 +19,7 @@ import {
   CheckCircle,
   Clock,
   Coffee,
+  ExternalLink,
   Flag,
   Loader2,
   MapPin,
@@ -27,8 +28,9 @@ import {
   Users,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { kindLabel, providerLabel } from '@/lib/media/external'
 
-type TabId = 'register' | 'schedule' | 'boards' | 'results'
+type TabId = 'register' | 'schedule' | 'boards' | 'results' | 'media'
 
 interface HubDivision {
   id: string
@@ -98,6 +100,14 @@ interface HubPayload {
   }[]
   resultsPublished?: boolean
   resultsPublishedAt?: string | null
+  media?: Array<{
+    id: string
+    title: string
+    url: string
+    kind: string
+    provider: string
+    description: string | null
+  }>
 }
 
 type OfficialResults = {
@@ -167,7 +177,8 @@ function parseTab(value: string | null): TabId {
     value === 'schedule' ||
     value === 'boards' ||
     value === 'register' ||
-    value === 'results'
+    value === 'results' ||
+    value === 'media'
   ) {
     return value
   }
@@ -297,8 +308,20 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
     )
   }
 
-  const { event, divisions, schedule, myBoards, publicBoards, registrationOpen, authenticated } =
-    data
+  const {
+    event,
+    divisions,
+    schedule,
+    myBoards,
+    publicBoards,
+    registrationOpen,
+    authenticated,
+    media = [],
+  } = data
+
+  const showMedia = media.length > 0
+  const tabCount =
+    3 + (data.resultsPublished ? 1 : 0) + (showMedia ? 1 : 0)
 
   const groupedByDate = schedule.reduce<Record<string, ScheduleItem[]>>((acc, item) => {
     const dateKey = item.scheduled_start
@@ -394,7 +417,13 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
       <div className="container mx-auto px-4 py-6 max-w-3xl">
         <Tabs value={tab} onValueChange={onTabChange}>
           <TabsList
-            className={`grid w-full mb-6 ${data.resultsPublished ? 'grid-cols-4' : 'grid-cols-3'}`}
+            className={`grid w-full mb-6 ${
+              tabCount >= 5
+                ? 'grid-cols-5'
+                : tabCount === 4
+                  ? 'grid-cols-4'
+                  : 'grid-cols-3'
+            }`}
           >
             <TabsTrigger value="register">Register</TabsTrigger>
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
@@ -402,6 +431,7 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
             {data.resultsPublished && (
               <TabsTrigger value="results">Results</TabsTrigger>
             )}
+            {showMedia && <TabsTrigger value="media">Media</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="register" className="space-y-4">
@@ -726,6 +756,50 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
                   </div>
                 ))
               )}
+            </TabsContent>
+          )}
+
+          {showMedia && (
+            <TabsContent value="media" className="space-y-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Event media</CardTitle>
+                  <CardDescription>
+                    External livestreams, highlights, and albums (opens on the host site).
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+              {media.map((m) => (
+                <a
+                  key={m.id}
+                  href={m.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block"
+                >
+                  <Card className="hover:bg-accent/40 transition-colors">
+                    <CardContent className="flex items-start justify-between gap-3 py-3">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{m.title}</p>
+                        {m.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                            {m.description}
+                          </p>
+                        )}
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          <Badge variant="outline">
+                            {kindLabel(m.kind as never)}
+                          </Badge>
+                          <Badge variant="secondary">
+                            {providerLabel(m.provider as never)}
+                          </Badge>
+                        </div>
+                      </div>
+                      <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </CardContent>
+                  </Card>
+                </a>
+              ))}
             </TabsContent>
           )}
         </Tabs>
