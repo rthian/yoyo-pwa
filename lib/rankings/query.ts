@@ -1,6 +1,9 @@
 /**
- * Query season league rankings with category, geo, gender filters.
- * Optimized: one embedded ranking_points query (+ optional geo already embedded).
+ * Query season league rankings — Slice C: embed competitors via competitor_id.
+ * Callers: app/api/rankings/route.ts, app/api/rankings/leagues/[slug]/route.ts
+ * Glob: existing lib/rankings/query.ts (rewrite embed path)
+ * Sample: ranking_points.competitor_id → competitors.public_id for /players links
+ * User: "ok next"
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DivisionFilter, Gender, LeagueRankingEntry } from './types'
@@ -12,20 +15,18 @@ export interface RankingsQuery {
   division?: DivisionFilter
   search?: string | null
   countingResults?: number | null
-  /** When set (Custom League), only these events' points count. */
   eventIds?: string[] | null
-  /** World Race: National + Continental + World tiers. */
   worldRaceOnly?: boolean
-  /** National Race: Regional + National tiers. */
   nationalRaceOnly?: boolean
-  /** public_id or member uuid — return focusEntry even outside the page window. */
+  /** public_id, competitor uuid, or legacy member uuid */
   focusMember?: string | null
   limit?: number
   offset?: number
 }
 
-type AggMember = {
-  id: string
+type AggCompetitor = {
+  competitorId: string
+  memberId: string | null
   full_name: string
   nickname: string | null
   country: string | null
@@ -39,11 +40,13 @@ type AggMember = {
 
 type PointsRow = {
   member_id: string
+  competitor_id: string | null
   points: number | string
   field_scope: string | null
   event_id: string
-  members: {
+  competitors: {
     id: string
+    source_member_id: string | null
     full_name: string
     nickname: string | null
     country: string | null
@@ -72,31 +75,37 @@ function one<T>(v: T | T[] | null | undefined): T | null {
 }
 
 function aggregateTotals(
-  byMember: Map<string, { points: number[]; member: AggMember; bestSingle: number }>,
+  byCompetitor: Map<
+    string,
+    { points: number[]; competitor: AggCompetitor; bestSingle: number }
+  >,
   counting: number | null
 ) {
-  return [...byMember.entries()].map(([memberId, { points, member, bestSingle }]) => {
-    const sorted = [...points].sort((a, b) => b - a)
-    const counted =
-      counting != null && counting > 0 ? sorted.slice(0, counting) : sorted
-    const totalPoints =
-      Math.round(counted.reduce((a, b) => a + b, 0) * 100) / 100
-    return {
-      memberId,
-      publicId: member.public_id,
-      memberName: member.full_name,
-      nickname: member.nickname,
-      country: member.country,
-      isoAlpha2: member.iso_alpha2,
-      geoName: member.geo_name,
-      gender: member.gender,
-      totalPoints,
-      eventsPlayed: points.length,
-      bestSingle,
-      rank: 0,
-      overallRank: null as number | null,
+  return [...byCompetitor.entries()].map(
+    ([competitorId, { points, competitor, bestSingle }]) => {
+      const sorted = [...points].sort((a, b) => b - a)
+      const counted =
+        counting != null && counting > 0 ? sorted.slice(0, counting) : sorted
+      const totalPoints =
+        Math.round(counted.reduce((a, b) => a + b, 0) * 100) / 100
+      return {
+        competitorId,
+        memberId: competitor.memberId || competitorId,
+        publicId: competitor.public_id,
+        memberName: competitor.full_name,
+        nickname: competitor.nickname,
+        country: competitor.country,
+        isoAlpha2: competitor.iso_alpha2,
+        geoName: competitor.geo_name,
+        gender: competitor.gender,
+        totalPoints,
+        eventsPlayed: points.length,
+        bestSingle,
+        rank: 0,
+        overallRank: null as number | null,
+      }
     }
-  })
+  )
 }
 
 function rankList<
@@ -148,11 +157,13 @@ export async function getLeagueRankings(
     .select(
       `
       member_id,
+      competitor_id,
       points,
       field_scope,
       event_id,
-      members!inner (
+      competitors!inner (
         id,
+        source_member_id,
         full_name,
         nickname,
         country,
@@ -169,7 +180,8 @@ export async function getLeagueRankings(
     `
     )
     .eq('season_id', query.seasonId)
-    .eq('members.is_active', true)
+    .eq('competitors.is_active', true)
+    .not('competitor_id', 'is', null)
 
   if (query.categoryId) {
     pointsQuery = pointsQuery.eq('category_id', query.categoryId)
@@ -187,10 +199,15 @@ export async function getLeagueRankings(
   if (!rawRows?.length) return { entries: [], total: 0, focusEntry: null }
 
   const rows = (rawRows as unknown as PointsRow[]).filter((r) => {
-    const tier = one(r.events?.event_tiers as
-      | { counts_for_world_race: boolean; counts_for_national_race: boolean }
-      | { counts_for_world_race: boolean; counts_for_national_race: boolean }[]
-      | null)
+    const tier = one(
+      r.events?.event_tiers as
+        | { counts_for_world_race: boolean; counts_for_national_race: boolean }
+        | {
+            counts_for_world_race: boolean
+            counts_for_national_race: boolean
+          }[]
+        | null
+    )
     if (query.worldRaceOnly && !tier?.counts_for_world_race) return false
     if (query.nationalRaceOnly && !tier?.counts_for_national_race) return false
     return true
@@ -198,22 +215,28 @@ export async function getLeagueRankings(
 
   if (!rows.length) return { entries: [], total: 0, focusEntry: null }
 
-  const memberById = new Map<string, AggMember>()
+  const competitorById = new Map<string, AggCompetitor>()
   for (const r of rows) {
-    const m = one(r.members as PointsRow['members'] | PointsRow['members'][])
-    if (!m || memberById.has(r.member_id)) continue
-    const geo = one(m.geo_nodes as
-      | { name: string; iso_alpha2: string | null; path: string }
-      | { name: string; iso_alpha2: string | null; path: string }[]
-      | null)
-    memberById.set(r.member_id, {
-      id: m.id,
-      full_name: m.full_name,
-      nickname: m.nickname,
-      country: m.country,
-      home_geo_id: m.home_geo_id,
-      public_id: m.public_id ?? null,
-      gender: (m.gender as Gender) ?? 'undisclosed',
+    const c = one(
+      r.competitors as PointsRow['competitors'] | PointsRow['competitors'][]
+    )
+    const competitorId = r.competitor_id || c?.id
+    if (!c || !competitorId || competitorById.has(competitorId)) continue
+    const geo = one(
+      c.geo_nodes as
+        | { name: string; iso_alpha2: string | null; path: string }
+        | { name: string; iso_alpha2: string | null; path: string }[]
+        | null
+    )
+    competitorById.set(competitorId, {
+      competitorId,
+      memberId: c.source_member_id ?? r.member_id ?? null,
+      full_name: c.full_name,
+      nickname: c.nickname,
+      country: c.country,
+      home_geo_id: c.home_geo_id,
+      public_id: c.public_id ?? null,
+      gender: (c.gender as Gender) ?? 'undisclosed',
       geo_path: geo?.path ?? null,
       geo_name: geo?.name ?? null,
       iso_alpha2: geo?.iso_alpha2 ?? null,
@@ -222,78 +245,85 @@ export async function getLeagueRankings(
 
   const search = query.search?.trim().toLowerCase() ?? ''
 
-  const matchesGeo = (member: AggMember) => {
+  const matchesGeo = (competitor: AggCompetitor) => {
     if (!query.geoPath || query.geoPath === '/WORLD') return true
-    if (!member.geo_path) return false
+    if (!competitor.geo_path) return false
     return (
-      member.geo_path === query.geoPath ||
-      member.geo_path.startsWith(query.geoPath + '/')
+      competitor.geo_path === query.geoPath ||
+      competitor.geo_path.startsWith(query.geoPath + '/')
     )
   }
 
-  const matchesSearch = (member: AggMember) => {
+  const matchesSearch = (competitor: AggCompetitor) => {
     if (!search) return true
     const hay =
-      `${member.full_name} ${member.nickname ?? ''} ${member.public_id ?? ''}`.toLowerCase()
+      `${competitor.full_name} ${competitor.nickname ?? ''} ${competitor.public_id ?? ''}`.toLowerCase()
     return hay.includes(search)
   }
 
   const overallFiltered = rows.filter((r) => {
-    const member = memberById.get(r.member_id)
-    if (!member) return false
-    return matchesGeo(member) && matchesSearch(member)
+    const competitorId = r.competitor_id
+    if (!competitorId) return false
+    const competitor = competitorById.get(competitorId)
+    if (!competitor) return false
+    return matchesGeo(competitor) && matchesSearch(competitor)
   })
 
-  const overallByMember = new Map<
+  const overallByCompetitor = new Map<
     string,
-    { points: number[]; member: AggMember; bestSingle: number }
+    { points: number[]; competitor: AggCompetitor; bestSingle: number }
   >()
   for (const r of overallFiltered) {
-    const member = memberById.get(r.member_id)!
+    const competitorId = r.competitor_id!
+    const competitor = competitorById.get(competitorId)!
     const pts = Number(r.points) || 0
-    const entry = overallByMember.get(r.member_id) ?? {
+    const entry = overallByCompetitor.get(competitorId) ?? {
       points: [] as number[],
-      member,
+      competitor,
       bestSingle: 0,
     }
     entry.points.push(pts)
     entry.bestSingle = Math.max(entry.bestSingle, pts)
-    overallByMember.set(r.member_id, entry)
+    overallByCompetitor.set(competitorId, entry)
   }
 
   const counting = query.countingResults ?? null
-  const overallTotals = aggregateTotals(overallByMember, counting)
+  const overallTotals = aggregateTotals(overallByCompetitor, counting)
   rankList(overallTotals)
-  const overallRankById = new Map(overallTotals.map((t) => [t.memberId, t.rank]))
+  const overallRankById = new Map(
+    overallTotals.map((t) => [t.competitorId, t.rank])
+  )
 
   const cohortFiltered = overallFiltered.filter((r) => {
-    const member = memberById.get(r.member_id)!
-    if (division === 'women') return member.gender === 'female'
+    const competitor = competitorById.get(r.competitor_id!)!
+    if (division === 'women') return competitor.gender === 'female'
     return true
   })
 
-  const byMember = new Map<
+  const byCompetitor = new Map<
     string,
-    { points: number[]; member: AggMember; bestSingle: number }
+    { points: number[]; competitor: AggCompetitor; bestSingle: number }
   >()
   for (const r of cohortFiltered) {
-    const member = memberById.get(r.member_id)!
+    const competitorId = r.competitor_id!
+    const competitor = competitorById.get(competitorId)!
     const pts = Number(r.points) || 0
-    const entry = byMember.get(r.member_id) ?? {
+    const entry = byCompetitor.get(competitorId) ?? {
       points: [] as number[],
-      member,
+      competitor,
       bestSingle: 0,
     }
     entry.points.push(pts)
     entry.bestSingle = Math.max(entry.bestSingle, pts)
-    byMember.set(r.member_id, entry)
+    byCompetitor.set(competitorId, entry)
   }
 
-  const totals = aggregateTotals(byMember, counting)
+  const totals = aggregateTotals(byCompetitor, counting)
   rankList(totals)
 
   const entries: LeagueRankingEntry[] = totals.map((t) => ({
     memberId: t.memberId,
+    competitorId: t.competitorId,
     publicId: t.publicId,
     memberName: t.memberName,
     nickname: t.nickname,
@@ -305,11 +335,18 @@ export async function getLeagueRankings(
     eventsPlayed: t.eventsPlayed,
     rank: t.rank,
     overallRank:
-      division === 'women' ? (overallRankById.get(t.memberId) ?? null) : null,
+      division === 'women'
+        ? (overallRankById.get(t.competitorId) ?? null)
+        : null,
   }))
 
   const focusEntry = focusKey
-    ? entries.find((e) => e.publicId === focusKey || e.memberId === focusKey) ?? null
+    ? (entries.find(
+        (e) =>
+          e.publicId === focusKey ||
+          e.memberId === focusKey ||
+          e.competitorId === focusKey
+      ) ?? null)
     : null
 
   return {

@@ -139,7 +139,10 @@ export interface RankingPoints {
 }
 
 export interface LeagueRankingEntry {
+  /** Auth account id (source_member_id) for “my standing” focus */
   memberId: string
+  /** Slice C competition identity */
+  competitorId?: string
   publicId: string | null
   memberName: string
   nickname: string | null
@@ -161,7 +164,10 @@ export interface LeagueStandingsRow {
 }
 
 export interface PlayerProfile {
+  /** Competitor uuid (Slice C) */
   id: string
+  /** Linked Auth account when self-linked */
+  accountMemberId?: string | null
   publicId: string | null
   fullName: string
   nickname: string | null

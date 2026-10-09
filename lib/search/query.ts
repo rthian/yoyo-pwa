@@ -1,9 +1,9 @@
 /**
- * Public search over members + events.
+ * Public search — Slice C: players from competitors; events unchanged.
  * Callers: app/api/search/route.ts, components/shared/SearchDialog.tsx
- * Glob: no prior lib/search/
- * Reads members (public), events. No writes.
- * User: "Lastly it should have a search for ease of discovery."
+ * Glob: existing lib/search/query.ts
+ * Sample hit: { type: "player", href: "/players/ZX905JYC" }
+ * User: "ok next"
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -26,8 +26,8 @@ export async function searchPublic(
   const pattern = `%${term}%`
   const hits: SearchHit[] = []
 
-  const { data: members } = await supabase
-    .from('members')
+  const { data: competitors } = await supabase
+    .from('competitors')
     .select(
       'id, public_id, full_name, nickname, country, is_active, profile_visibility'
     )
@@ -38,15 +38,19 @@ export async function searchPublic(
     )
     .limit(limit)
 
-  for (const m of members ?? []) {
+  for (const c of competitors ?? []) {
     hits.push({
       type: 'player',
-      id: m.id,
-      title: m.nickname || m.full_name,
-      subtitle: [m.full_name !== m.nickname ? m.full_name : null, m.public_id, m.country]
+      id: c.id,
+      title: c.nickname || c.full_name,
+      subtitle: [
+        c.full_name !== c.nickname ? c.full_name : null,
+        c.public_id,
+        c.country,
+      ]
         .filter(Boolean)
         .join(' · '),
-      href: `/players/${m.public_id || m.id}`,
+      href: `/players/${c.public_id || c.id}`,
     })
   }
 

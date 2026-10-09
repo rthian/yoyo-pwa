@@ -92,6 +92,18 @@ export async function PATCH(request: Request) {
       )
     }
 
+    // Slice C: keep self competitor display fields in sync for public profiles
+    await supabaseAdmin
+      .from('competitors')
+      .update({
+        full_name: validationResult.data.full_name,
+        nickname: validationResult.data.nickname ?? null,
+        country: validationResult.data.country ?? null,
+        gender: validationResult.data.gender ?? 'undisclosed',
+        home_geo_id: validationResult.data.home_geo_id ?? null,
+      })
+      .eq('source_member_id', user.id)
+
     return NextResponse.json({ member })
   } catch (error) {
     console.error('Profile update error:', error)
