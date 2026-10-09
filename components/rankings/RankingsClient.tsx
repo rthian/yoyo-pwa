@@ -1,7 +1,8 @@
 /**
- * Rankings board — WCA-inspired filters: season, category chips, Open|Women, region sheet, search.
- * Caller: app/rankings/page.tsx
- * User: filter better like WCA; gender; search
+ * Rankings board — WCA-inspired filters + My standing for logged-in users.
+ * Caller: app/rankings/page.tsx (Suspense)
+ * Auto-focuses signed-in member (public_id/uuid); highlights row and scrolls to it.
+ * User: "When i view rankings as a user, it doesnt show where i m if i m logged in..."
  */
 'use client'
 
@@ -9,15 +10,17 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getCountryFlag } from '@/lib/utils/country-flags'
-import { Info, Loader2, Search, X } from 'lucide-react'
+import { Info, Loader2, LocateFixed, Search, X } from 'lucide-react'
 import type { CustomLeague, DivisionFilter, GeoNode, LeagueRankingEntry, PlayCategory, Season } from '@/lib/rankings/types'
 import RegionSheet from './RegionSheet'
 import SearchDialog from '@/components/shared/SearchDialog'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/lib/auth/context'
 
 export default function RankingsClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { member, user, loading: authLoading } = useAuth()
 
   const [seasons, setSeasons] = useState<Season[]>([])
   const [categories, setCategories] = useState<PlayCategory[]>([])
@@ -39,8 +42,17 @@ export default function RankingsClient() {
   const q = searchParams.get('q') || ''
   const leagueSlug = searchParams.get('league') || ''
   const race = (searchParams.get('race') || 'world') as 'world' | 'national'
-  /** Deep-link highlight from profile / dashboard (`member` = publicId or uuid). */
-  const focusMember = searchParams.get('member') || ''
+  /** Explicit deep-link (`member` = publicId or uuid). */
+  const urlFocusMember = searchParams.get('member') || ''
+  const selfFocusKey = member?.public_id || member?.id || ''
+  /** URL wins when set; otherwise auto-focus the signed-in member. */
+  const focusMember = urlFocusMember || selfFocusKey
+  const isSelfFocus =
+    Boolean(selfFocusKey) &&
+    Boolean(focusMember) &&
+    (focusMember === selfFocusKey ||
+      focusMember === member?.id ||
+      focusMember === member?.public_id)
   const focusRowRef = useRef<HTMLLIElement | null>(null)
 
   const setFilter = (patch: Record<string, string | null>) => {
@@ -85,6 +97,9 @@ export default function RankingsClient() {
   }, [])
 
   useEffect(() => {
+    // Wait for auth so logged-in users get focusMember on the first rankings fetch
+    if (authLoading) return
+
     const effectiveSeason = seasonSlug || '2026'
     const ac = new AbortController()
     const hasRows = entries.length > 0
@@ -129,17 +144,19 @@ export default function RankingsClient() {
     return () => ac.abort()
     // entries intentionally omitted — only used for soft-refresh UX
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seasonSlug, category, geoPath, division, q, leagueSlug, race, focusMember])
+  }, [seasonSlug, category, geoPath, division, q, leagueSlug, race, focusMember, authLoading])
 
-  useEffect(() => {
-    if (!focusMember || loading) return
+  const scrollToFocus = () => {
     const el = focusRowRef.current
     if (!el) return
-    const t = window.setTimeout(() => {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }, 80)
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  useEffect(() => {
+    if (!focusMember || loading || authLoading) return
+    const t = window.setTimeout(scrollToFocus, 100)
     return () => window.clearTimeout(t)
-  }, [focusMember, loading, entries, focusEntry])
+  }, [focusMember, loading, authLoading, entries, focusEntry])
 
   const focusInBoard = useMemo(() => {
     if (!focusMember || !focusEntry) return false
@@ -152,6 +169,10 @@ export default function RankingsClient() {
     if (!focusEntry || focusInBoard) return entries
     return [...entries, focusEntry]
   }, [entries, focusEntry, focusInBoard])
+
+  const selfStanding = isSelfFocus ? focusEntry : null
+  const viewingOther =
+    Boolean(user) && Boolean(urlFocusMember) && !isSelfFocus
 
   const selectedGeo = useMemo(
     () => geoNodes.find((g) => g.path === geoPath),
@@ -330,6 +351,74 @@ export default function RankingsClient() {
         {isRefreshing ? ' · Updating…' : ''}
       </p>
 
+      {!authLoading && !user && (
+        <div className="rounded-xl border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+          <Link
+            href={`/login?redirect=${encodeURIComponent(`/rankings?${searchParams.toString()}`)}`}
+            className="font-medium text-foreground underline underline-offset-2"
+          >
+            Sign in
+          </Link>{' '}
+          to see your standing on this board.
+        </div>
+      )}
+
+      {user && (
+        <div
+          id="my-standing"
+          className="rounded-xl border border-primary/25 bg-primary/5 px-4 py-3"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
+                My standing
+              </p>
+              {viewingOther ? (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Viewing another player’s highlight on this board.
+                </p>
+              ) : loading && !selfStanding ? (
+                <p className="mt-1 text-sm text-muted-foreground">Looking up your rank…</p>
+              ) : selfStanding ? (
+                <>
+                  <p className="mt-1 text-lg font-semibold tabular-nums tracking-tight">
+                    #{selfStanding.rank}
+                    <span className="ml-2 text-base font-medium text-muted-foreground">
+                      {selfStanding.totalPoints.toLocaleString()} pts
+                    </span>
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {selfStanding.nickname || selfStanding.memberName}
+                    {selfStanding.eventsPlayed
+                      ? ` · ${selfStanding.eventsPlayed} event${
+                          selfStanding.eventsPlayed === 1 ? '' : 's'
+                        }`
+                      : ''}
+                    {focusInBoard ? '' : ' · outside top of list (pinned below)'}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  No points on this board for the current filters.
+                </p>
+              )}
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              {viewingOther && selfFocusKey && (
+                <button
+                  type="button"
+                  onClick={() => setFilter({ member: null })}
+                  className="inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium hover:bg-muted"
+                >
+                  Show mine
+                </button>
+              )}
+              {selfStanding && <ButtonJump onClick={scrollToFocus} />}
+            </div>
+          </div>
+        </div>
+      )}
+
       {loading && entries.length === 0 ? (
         <div className="flex justify-center py-16 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin" />
@@ -344,7 +433,10 @@ export default function RankingsClient() {
             const href = `/players/${e.publicId || e.memberId}`
             const isFocus =
               Boolean(focusMember) &&
-              (e.publicId === focusMember || e.memberId === focusMember)
+              (e.publicId === focusMember ||
+                e.memberId === focusMember ||
+                (Boolean(selfFocusKey) &&
+                  (e.publicId === selfFocusKey || e.memberId === selfFocusKey)))
             const isDeepPinned =
               Boolean(focusEntry) &&
               !focusInBoard &&
@@ -353,6 +445,7 @@ export default function RankingsClient() {
             return (
               <li
                 key={isDeepPinned ? `focus-${e.memberId}` : e.memberId}
+                id={isFocus && isSelfFocus ? 'ranking-you' : undefined}
                 ref={isFocus ? focusRowRef : undefined}
                 className={cn(
                   isFocus && 'bg-primary/10 ring-2 ring-inset ring-primary/40',
@@ -361,7 +454,7 @@ export default function RankingsClient() {
               >
                 {isDeepPinned && (
                   <p className="px-4 pt-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Your standing · rank #{e.rank}
+                    {isSelfFocus ? 'Your standing' : 'Focused standing'} · rank #{e.rank}
                   </p>
                 )}
                 <Link
@@ -375,7 +468,7 @@ export default function RankingsClient() {
                     <p className="truncate font-medium">
                       {e.isoAlpha2 ? `${getCountryFlag(e.isoAlpha2)} ` : ''}
                       {e.nickname || e.memberName}
-                      {isFocus && (
+                      {isFocus && isSelfFocus && (
                         <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-primary">
                           You
                         </span>
@@ -413,6 +506,19 @@ export default function RankingsClient() {
       />
       <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
+  )
+}
+
+function ButtonJump({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-primary/30 bg-background px-3 text-sm font-medium text-foreground hover:bg-muted"
+    >
+      <LocateFixed className="h-4 w-4 text-primary" />
+      Jump to me
+    </button>
   )
 }
 
