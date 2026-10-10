@@ -5,6 +5,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { snapshotDivisionResults } from '@/lib/rankings/standings'
+import { notifyResultsPublished } from '@/lib/comms/hooks'
 
 export type PublishBlocker = { code: string; message: string; divisionId?: string }
 
@@ -165,6 +166,15 @@ export async function publishEventResults(
       divisionIds: readiness.divisions.map((d) => d.id),
     },
   })
+
+  try {
+    await notifyResultsPublished(supabase, {
+      eventId: args.eventId,
+      publishedAt,
+    })
+  } catch (e) {
+    console.error('[comms] results published notify', e)
+  }
 
   return { publishedAt, divisionsRefreshed: refreshed }
 }

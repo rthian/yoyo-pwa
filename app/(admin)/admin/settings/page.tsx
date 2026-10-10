@@ -129,12 +129,20 @@ export default function SettingsPage() {
                 Enabled
               </Badge>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="font-medium">Email Notifications</p>
-                <p className="text-sm text-muted-foreground">System emails</p>
+                <p className="text-sm text-muted-foreground">
+                  Per-account opt-outs at{' '}
+                  <a href="/member/notifications" className="text-primary underline">
+                    /member/notifications
+                  </a>
+                  . Outbox via cron + optional RESEND_API_KEY.
+                </p>
               </div>
-              <Badge variant="secondary">Coming Soon</Badge>
+              <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                Active
+              </Badge>
             </div>
           </CardContent>
         </Card>

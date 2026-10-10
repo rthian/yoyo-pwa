@@ -250,3 +250,25 @@ export const receiptReviewSchema = z.object({
   action: z.enum(['approve_payment', 'reject_payment']),
   reason: z.string().max(1000).optional().nullable(),
 })
+
+
+export const notificationPreferencesSchema = z.object({
+  email_payment_reminders: z.boolean().optional(),
+  email_event_countdown: z.boolean().optional(),
+  email_organizer_blasts: z.boolean().optional(),
+  email_results_and_rankings: z.boolean().optional(),
+  email_staff_ops: z.boolean().optional(),
+})
+
+export const organizerBlastSchema = z.object({
+  segment: z.enum([
+    'all_registered',
+    'unpaid',
+    'waitlisted',
+    'confirmed',
+    'by_division',
+  ]),
+  division_id: z.string().uuid().optional().nullable(),
+  subject: z.string().min(1).max(200),
+  body: z.string().min(1).max(4000),
+})

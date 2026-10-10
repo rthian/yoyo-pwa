@@ -597,3 +597,59 @@ export interface AuthUser {
   email: string
   member?: Member
 }
+
+
+/** Prompt 22 */
+export type CommsOutboxType =
+  | 'payment_unpaid'
+  | 'payment_pending_ack'
+  | 'payment_pending_staff'
+  | 'payment_rejected'
+  | 'payment_approved'
+  | 'payment_reminder'
+  | 'event_countdown'
+  | 'event_day'
+  | 'organizer_blast'
+  | 'results_published'
+  | 'division_locked_digest'
+
+export interface NotificationPreferencesRow {
+  account_id: string
+  email_payment_reminders: boolean
+  email_event_countdown: boolean
+  email_organizer_blasts: boolean
+  email_results_and_rankings: boolean
+  email_staff_ops: boolean
+  updated_at: string
+}
+
+export interface CommsOutboxRow {
+  id: string
+  type: CommsOutboxType
+  event_id: string | null
+  registration_id: string | null
+  recipient_account_id: string | null
+  recipient_email: string
+  subject: string
+  body_text: string
+  body_html: string | null
+  idempotency_key: string
+  status: 'pending' | 'processing' | 'sent' | 'failed' | 'cancelled'
+  scheduled_for: string
+  sent_at: string | null
+  error: string | null
+  meta: Record<string, unknown>
+  created_at: string
+}
+
+export interface EventCommsLogRow {
+  id: string
+  event_id: string
+  actor_account_id: string | null
+  segment: string
+  subject: string
+  body_preview: string | null
+  recipient_count: number
+  outbox_ids: string[]
+  created_at: string
+}
