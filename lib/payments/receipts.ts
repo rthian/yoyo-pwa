@@ -6,6 +6,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { assertManagesCompetitor } from '@/lib/identity/competitors'
 import type { PaymentStatusPlaceholder } from '@/lib/types/database'
+import {
+  notifyPaymentReceiptUploaded,
+  notifyPaymentReviewed,
+} from '@/lib/comms/hooks'
 
 export const RECEIPT_BUCKET = 'registration-receipts'
 export const MAX_RECEIPT_BYTES = 10 * 1024 * 1024
@@ -219,6 +223,17 @@ export async function signReceiptUpload(
     detail: { receiptId: versionId, versionNumber },
   })
 
+  try {
+    await notifyPaymentReceiptUploaded(supabase, {
+      eventId: event!.id,
+      registrationId: args.registrationId,
+      competitorId: reg.competitor_id as string,
+      receiptId: versionId,
+    })
+  } catch (e) {
+    console.error('[comms] payment receipt upload notify', e)
+  }
+
   return { receipt: receipt as RegistrationReceipt, signed }
 }
 
@@ -235,7 +250,7 @@ export async function reviewReceipt(
 ) {
   const { data: reg } = await supabase
     .from('registrations')
-    .select('id, event_id, payment_status')
+    .select('id, event_id, payment_status, competitor_id')
     .eq('id', args.registrationId)
     .eq('event_id', args.eventId)
     .maybeSingle()
@@ -282,6 +297,18 @@ export async function reviewReceipt(
       detail: { receiptId: args.receiptId },
     })
 
+    try {
+      await notifyPaymentReviewed(supabase, {
+        eventId: args.eventId,
+        registrationId: args.registrationId,
+        competitorId: reg.competitor_id as string,
+        receiptId: args.receiptId,
+        decision: 'approve',
+      })
+    } catch (e) {
+      console.error('[comms] payment approved notify', e)
+    }
+
     return { payment_status: 'paid' as const }
   }
 
@@ -312,6 +339,19 @@ export async function reviewReceipt(
     action: 'payment_rejected',
     detail: { receiptId: args.receiptId, reason: args.reason.trim() },
   })
+
+  try {
+    await notifyPaymentReviewed(supabase, {
+      eventId: args.eventId,
+      registrationId: args.registrationId,
+      competitorId: reg.competitor_id as string,
+      receiptId: args.receiptId,
+      decision: 'reject',
+      reason: args.reason.trim(),
+    })
+  } catch (e) {
+    console.error('[comms] payment rejected notify', e)
+  }
 
   return { payment_status: 'unpaid' as const }
 }

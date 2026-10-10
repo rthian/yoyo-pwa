@@ -1,6 +1,6 @@
 # Prompts 17+ — Product playbook
 
-**Status:** Prompts **17** (guardians) and **20** (QR receipts) on app; apply migration `026` after deploy. Identity through `025`.  
+**Status:** Prompts **17**, **20**, **22** on app; apply migrations `026`–`027` after deploy. Identity through `025`.  
 **Payments:** Manual QR + receipt verification (**20**); Stripe deferred.
 
 ---
@@ -81,6 +81,8 @@
 ---
 
 ## Prompt 22 — Event comms & notifications
+
+**Shipped (app + `027`):** outbox, prefs, cron, organizer blasts, payment/results hooks. Email via Resend when `RESEND_API_KEY` set; otherwise console delivery.
 
 **Scope:** Automated reminders, event countdown prep, organizer blasts, and results/rankings digests. Email MVP; in-app bell phase 2.
 

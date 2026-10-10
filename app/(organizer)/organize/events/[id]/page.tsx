@@ -20,6 +20,7 @@ import EventRegistrationsPanel from '@/components/admin/EventRegistrationsPanel'
 import EventTracksPanel from '@/components/admin/EventTracksPanel'
 import EventMusicOpsPanel from '@/components/admin/EventMusicOpsPanel'
 import EventMediaPanel from '@/components/admin/EventMediaPanel'
+import EventCommsPanel from '@/components/admin/EventCommsPanel'
 import { formatInTimeZone } from '@/lib/events/timing'
 import { requireEventStaff } from '@/lib/organize/access'
 
@@ -45,6 +46,7 @@ export default async function OrganizeEventPage({ params, searchParams }: Props)
     capabilities.view_ops && 'media',
     capabilities.view_ops && 'schedule',
     capabilities.manage_registration && 'registrations',
+    (capabilities.manage_registration || capabilities.view_ops) && 'comms',
     capabilities.view_ops && 'staff',
   ].filter(Boolean) as string[]
 
@@ -148,6 +150,9 @@ export default async function OrganizeEventPage({ params, searchParams }: Props)
           {capabilities.manage_registration && (
             <TabsTrigger value="registrations">Registrations</TabsTrigger>
           )}
+          {(capabilities.manage_registration || capabilities.view_ops) && (
+            <TabsTrigger value="comms">Comms</TabsTrigger>
+          )}
           {capabilities.view_ops && <TabsTrigger value="staff">Staff</TabsTrigger>}
         </TabsList>
 
@@ -246,6 +251,25 @@ export default async function OrganizeEventPage({ params, searchParams }: Props)
               </CardHeader>
               <CardContent>
                 <EventRegistrationsPanel eventId={id} readOnly={!capabilities.manage_registration} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {(capabilities.manage_registration || capabilities.view_ops) && (
+          <TabsContent value="comms">
+            <Card>
+              <CardHeader>
+                <CardTitle>Comms</CardTitle>
+                <CardDescription>
+                  Segmented email blasts and send history. Automated reminders run via cron.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <EventCommsPanel
+                  eventId={id}
+                  readOnly={!capabilities.manage_registration && !capabilities.manage_event}
+                />
               </CardContent>
             </Card>
           </TabsContent>
