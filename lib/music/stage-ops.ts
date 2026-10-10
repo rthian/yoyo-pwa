@@ -92,14 +92,13 @@ export async function buildDivisionMusicPlaylist(
   const { data: competitors } = competitorIds.length
     ? await supabase
         .from('competitors')
-        .select('id, full_name, public_id, source_member_id')
+        .select('id, full_name, public_id')
         .in('id', competitorIds)
     : {
         data: [] as Array<{
           id: string
           full_name: string
           public_id: string | null
-          source_member_id: string | null
         }>,
       }
 

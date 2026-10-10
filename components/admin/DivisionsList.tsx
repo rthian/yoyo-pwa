@@ -26,8 +26,9 @@ import {
 import { MoreHorizontal, Edit, Trash2, Users, Trophy } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Division } from '@/lib/types/database'
+import type { EventOpsPanelProps } from '@/components/admin/event-ops-props'
 
-interface DivisionsListProps {
+interface DivisionsListProps extends EventOpsPanelProps {
   divisions: Division[]
   eventId: string
   /** Prompt 16: /admin/events or /organize/events — User: "ok let do Prompt 16" */
@@ -38,6 +39,7 @@ export default function DivisionsList({
   divisions,
   eventId,
   basePath = '/admin/events',
+  readOnly = false,
 }: DivisionsListProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -110,6 +112,14 @@ export default function DivisionsList({
               </Badge>
             </TableCell>
             <TableCell className="text-right">
+              {readOnly ? (
+                <Link href={`${root}/divisions/${division.id}`}>
+                  <Button variant="ghost" size="sm">
+                    <Users className="h-4 w-4 mr-2" />
+                    View
+                  </Button>
+                </Link>
+              ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm">
@@ -139,6 +149,7 @@ export default function DivisionsList({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              )}
             </TableCell>
           </TableRow>
         ))}

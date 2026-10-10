@@ -25,7 +25,7 @@ export default async function JudgeCompletedPage() {
       *,
       division_member:division_members(
         id,
-        competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)
+        competitor:competitors(id, full_name, nickname, country, public_id)
       ),
       division:divisions(
         id,

@@ -173,6 +173,7 @@ export default async function OrganizeEventPage({ params, searchParams }: Props)
                   divisions={divisions || []}
                   eventId={id}
                   basePath={BASE}
+                  readOnly={!capabilities.manage_divisions}
                 />
               </CardContent>
             </Card>
@@ -189,7 +190,7 @@ export default async function OrganizeEventPage({ params, searchParams }: Props)
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <EventTracksPanel eventId={id} />
+                <EventTracksPanel eventId={id} readOnly={!capabilities.manage_divisions} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -202,7 +203,7 @@ export default async function OrganizeEventPage({ params, searchParams }: Props)
                 <CardTitle>Stage music operations</CardTitle>
               </CardHeader>
               <CardContent>
-                <EventMusicOpsPanel eventId={id} />
+                <EventMusicOpsPanel eventId={id} readOnly={!capabilities.manage_music} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -218,7 +219,7 @@ export default async function OrganizeEventPage({ params, searchParams }: Props)
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <EventMediaPanel eventId={id} />
+                <EventMediaPanel eventId={id} readOnly={!capabilities.manage_event} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -231,7 +232,7 @@ export default async function OrganizeEventPage({ params, searchParams }: Props)
                 <CardTitle>Event schedule</CardTitle>
               </CardHeader>
               <CardContent>
-                <ScheduleManager eventId={id} />
+                <ScheduleManager eventId={id} readOnly={!capabilities.manage_schedule} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -244,7 +245,7 @@ export default async function OrganizeEventPage({ params, searchParams }: Props)
                 <CardTitle>Registrations</CardTitle>
               </CardHeader>
               <CardContent>
-                <EventRegistrationsPanel eventId={id} />
+                <EventRegistrationsPanel eventId={id} readOnly={!capabilities.manage_registration} />
               </CardContent>
             </Card>
           </TabsContent>

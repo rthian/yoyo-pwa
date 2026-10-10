@@ -26,6 +26,7 @@ export default async function OrganizeDivisionPage({
   const { id: eventId, divisionId } = await params
   const { capabilities, supabaseAdmin } = await requireEventStaff(eventId, 'view_ops')
 
+
   const { data: division, error } = await supabaseAdmin
     .from('divisions')
     .select(`*, event:events(id, name, status)`)
@@ -123,7 +124,14 @@ export default async function OrganizeDivisionPage({
               <CardDescription>Enrollment and play order</CardDescription>
             </CardHeader>
             <CardContent>
-              <DivisionParticipants divisionId={divisionId} />
+              <DivisionParticipants
+                divisionId={divisionId}
+                canEnroll={capabilities.manage_registration}
+                canReorder={capabilities.manage_play_order}
+                canUpdateStatus={
+                  capabilities.manage_registration || capabilities.check_in
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -133,7 +141,7 @@ export default async function OrganizeDivisionPage({
               <CardTitle>Judges</CardTitle>
             </CardHeader>
             <CardContent>
-              <DivisionJudges divisionId={divisionId} />
+              <DivisionJudges divisionId={divisionId} readOnly={!capabilities.assign_judges} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -144,6 +152,7 @@ export default async function OrganizeDivisionPage({
             </CardHeader>
             <CardContent>
               <MusicReadinessPanel
+                readOnly={!capabilities.manage_music}
                 divisionId={divisionId}
                 eventId={eventId}
                 eventOpsHref={`/organize/events/${eventId}?tab=music`}

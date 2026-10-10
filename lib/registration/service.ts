@@ -18,21 +18,8 @@ export async function getMemberIdForCompetitor(
   supabase: SupabaseClient,
   competitorId: string
 ): Promise<string | null> {
-  const { data: competitor } = await supabase
-    .from('competitors')
-    .select('source_member_id')
-    .eq('id', competitorId)
-    .maybeSingle()
-  if (competitor?.source_member_id) return competitor.source_member_id
-
-  const { data: link } = await supabase
-    .from('account_competitor_links')
-    .select('account_id')
-    .eq('competitor_id', competitorId)
-    .eq('relationship', 'self')
-    .maybeSingle()
-
-  return link?.account_id ?? null
+  const { getSelfAccountIdForCompetitor } = await import('@/lib/identity/competitors')
+  return getSelfAccountIdForCompetitor(supabase, competitorId)
 }
 
 async function writeAudit(

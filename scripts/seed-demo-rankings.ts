@@ -154,7 +154,15 @@ async function main() {
     }
     if (Object.keys(patch).length) {
       // Slice E: profile on competitors. Callers: seed CLI. User: "next"
-      await sb.from('competitors').update(patch).eq('source_member_id', p.id)
+      const { data: selfLink } = await sb
+        .from('account_competitor_links')
+        .select('competitor_id')
+        .eq('account_id', p.id)
+        .eq('relationship', 'self')
+        .maybeSingle()
+      if (selfLink?.competitor_id) {
+        await sb.from('competitors').update(patch).eq('id', selfLink.competitor_id)
+      }
       Object.assign(p, patch)
     }
   }
@@ -307,15 +315,13 @@ async function main() {
       // Glob: scripts/seed-demo-rankings.ts exists; no alternate demo seed
       // Sample: division_members { competitor_id: "comp_demo", play_order: 1 }
       // User: "next"
-      const { data: competitorRows } = await sb
-        .from('competitors')
-        .select('id, source_member_id')
-        .in(
-          'source_member_id',
-          entrants.map((p) => p.id)
-        )
+      const { data: linkRows } = await sb
+        .from('account_competitor_links')
+        .select('account_id, competitor_id')
+        .in('account_id', entrants.map((p) => p.id))
+        .eq('relationship', 'self')
       const competitorByMember = new Map(
-        (competitorRows ?? []).map((c) => [c.source_member_id as string, c.id])
+        (linkRows ?? []).map((l) => [l.account_id as string, l.competitor_id])
       )
       const dmRows = entrants.map((p, idx) => {
         const competitorId = competitorByMember.get(p.id)

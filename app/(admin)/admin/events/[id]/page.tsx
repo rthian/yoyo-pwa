@@ -228,7 +228,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
             <CardHeader>
               <CardTitle>External media</CardTitle>
               <CardDescription>
-                Livestreams, highlights, and photo albums (links only — embeds later)
+                Livestreams, highlights, and photo albums (curated links with click-to-load embeds on the public hub)
               </CardDescription>
             </CardHeader>
             <CardContent>

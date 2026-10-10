@@ -17,8 +17,9 @@ import {
 } from '@/components/ui/select'
 import { Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
+import type { EventOpsPanelProps } from '@/components/admin/event-ops-props'
 
-interface EventTracksPanelProps {
+interface EventTracksPanelProps extends EventOpsPanelProps {
   eventId: string
 }
 
@@ -38,7 +39,7 @@ type DivisionRow = {
   round_type: string | null
 }
 
-export default function EventTracksPanel({ eventId }: EventTracksPanelProps) {
+export default function EventTracksPanel({ eventId, readOnly = false }: EventTracksPanelProps) {
   const [tracks, setTracks] = useState<Track[]>([])
   const [divisions, setDivisions] = useState<DivisionRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -127,6 +128,7 @@ export default function EventTracksPanel({ eventId }: EventTracksPanelProps) {
         Semi / Final). Advancement decisions are recorded only — not auto-applied.
       </p>
 
+      {!readOnly && (
       <div className="flex flex-wrap gap-2 items-end">
         <div className="space-y-2 flex-1 min-w-[200px]">
           <Label>New track name</Label>
@@ -147,6 +149,7 @@ export default function EventTracksPanel({ eventId }: EventTracksPanelProps) {
           )}
         </Button>
       </div>
+      )}
 
       <div className="space-y-4">
         {tracks.map((track) => {
@@ -174,6 +177,7 @@ export default function EventTracksPanel({ eventId }: EventTracksPanelProps) {
         })}
       </div>
 
+      {!readOnly && (
       <div className="space-y-3">
         <h3 className="text-sm font-medium">Assign divisions to tracks</h3>
         {divisions.map((d) => (
@@ -212,6 +216,7 @@ export default function EventTracksPanel({ eventId }: EventTracksPanelProps) {
           </div>
         ))}
       </div>
+      )}
     </div>
   )
 }

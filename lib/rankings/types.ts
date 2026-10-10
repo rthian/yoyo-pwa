@@ -139,7 +139,7 @@ export interface RankingPoints {
 }
 
 export interface LeagueRankingEntry {
-  /** Auth account id (source_member_id) for “my standing” focus */
+  /** Auth account id (self link) for “my standing” focus */
   memberId: string
   /** Slice C competition identity */
   competitorId?: string

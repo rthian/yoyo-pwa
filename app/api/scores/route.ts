@@ -236,7 +236,7 @@ export async function GET(request: Request) {
         *,
         division_member:division_members(
           id,
-          competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)
+          competitor:competitors(id, full_name, nickname, country, public_id)
         )
       `)
 

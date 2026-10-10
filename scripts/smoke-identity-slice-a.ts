@@ -91,6 +91,7 @@ async function main() {
     // Slice E: public_id on competitors only. Callers: smoke CLI. User: "next"
     checks.push({ name: 'create_temp_member', ok: !memErr, detail: memErr?.message })
 
+    let cleanupCompetitorId: string | null = null
     if (!memErr) {
       const ensured = await ensureSelfCompetitorForMember(
         sb,
@@ -102,6 +103,7 @@ async function main() {
         ok: Boolean(ensured.competitor?.id && ensured.link?.relationship === 'self'),
         detail: { competitorId: ensured.competitor.id, created: ensured.created },
       })
+      cleanupCompetitorId = ensured.competitor.id
 
       const again = await ensureSelfCompetitorForMember(
         sb,
@@ -133,7 +135,9 @@ async function main() {
     }
 
     await sb.from('account_competitor_links').delete().eq('account_id', userId)
-    await sb.from('competitors').delete().eq('source_member_id', userId)
+    if (cleanupCompetitorId) {
+      await sb.from('competitors').delete().eq('id', cleanupCompetitorId)
+    }
     await sb.from('members').delete().eq('id', userId)
     await sb.auth.admin.deleteUser(userId)
     checks.push({ name: 'cleanup_temp_user', ok: true })

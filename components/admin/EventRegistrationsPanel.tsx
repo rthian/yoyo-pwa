@@ -3,6 +3,8 @@
  */
 'use client'
 
+import type { EventOpsPanelProps } from '@/components/admin/event-ops-props'
+
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,7 +19,7 @@ import { Badge } from '@/components/ui/badge'
 import { Download, Loader2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
-interface EventRegistrationsPanelProps {
+interface EventRegistrationsPanelProps extends EventOpsPanelProps {
   eventId: string
 }
 
@@ -41,7 +43,7 @@ type RegRow = {
   }>
 }
 
-export default function EventRegistrationsPanel({ eventId }: EventRegistrationsPanelProps) {
+export default function EventRegistrationsPanel({ eventId, readOnly = false }: EventRegistrationsPanelProps) {
   const [rows, setRows] = useState<RegRow[]>([])
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState<string | null>(null)
@@ -126,12 +128,14 @@ export default function EventRegistrationsPanel({ eventId }: EventRegistrationsP
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
+        {!readOnly && (
         <Button variant="outline" size="sm" asChild>
           <a href={`/api/events/${eventId}/registrations?format=csv`}>
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </a>
         </Button>
+        )}
       </div>
 
       {rows.length === 0 ? (
@@ -145,7 +149,7 @@ export default function EventRegistrationsPanel({ eventId }: EventRegistrationsP
               <TableHead>Competitor</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Divisions</TableHead>
-              <TableHead className="w-[160px]" />
+              {!readOnly && <TableHead className="w-[160px]" />}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -176,7 +180,7 @@ export default function EventRegistrationsPanel({ eventId }: EventRegistrationsP
                             WL #{e.waitlist_position}
                           </span>
                         )}
-                        {e.status === 'waitlisted' && (
+                        {!readOnly && e.status === 'waitlisted' && (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -190,6 +194,7 @@ export default function EventRegistrationsPanel({ eventId }: EventRegistrationsP
                     ))}
                   </ul>
                 </TableCell>
+                {!readOnly && (
                 <TableCell>
                   {row.status !== 'cancelled' && (
                     <Button
@@ -202,6 +207,7 @@ export default function EventRegistrationsPanel({ eventId }: EventRegistrationsP
                     </Button>
                   )}
                 </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>

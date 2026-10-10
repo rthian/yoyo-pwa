@@ -29,8 +29,9 @@ import {
 import { Plus, Trash2, Clock, MapPin, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { ScheduleEntry, ScheduleEntryType } from '@/lib/types/database'
+import type { EventOpsPanelProps } from '@/components/admin/event-ops-props'
 
-interface ScheduleManagerProps {
+interface ScheduleManagerProps extends EventOpsPanelProps {
   eventId: string
 }
 
@@ -68,7 +69,7 @@ const defaultNewEntry: NewEntryForm = {
   sort_order: 0,
 }
 
-export default function ScheduleManager({ eventId }: ScheduleManagerProps) {
+export default function ScheduleManager({ eventId, readOnly = false }: ScheduleManagerProps) {
   const [entries, setEntries] = useState<ScheduleEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -175,6 +176,7 @@ export default function ScheduleManager({ eventId }: ScheduleManagerProps) {
         <p className="text-sm text-muted-foreground">
           Add non-division schedule items like ceremonies, breaks, and registration periods
         </p>
+        {!readOnly && (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm">
@@ -283,6 +285,7 @@ export default function ScheduleManager({ eventId }: ScheduleManagerProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {entries.length === 0 ? (
@@ -321,6 +324,7 @@ export default function ScheduleManager({ eventId }: ScheduleManagerProps) {
                     <p className="text-xs text-muted-foreground mt-1">{entry.description}</p>
                   )}
                 </div>
+                {!readOnly && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -329,6 +333,7 @@ export default function ScheduleManager({ eventId }: ScheduleManagerProps) {
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
+                )}
               </CardContent>
             </Card>
           ))}

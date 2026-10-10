@@ -12,8 +12,6 @@ import {
   listTracksForEvent,
   recordAdvancementDecision,
 } from '@/lib/competition/tracks'
-import { createAdminClient } from '@/lib/supabase/admin'
-
 interface RouteParams {
   params: Promise<{ id: string }>
 }
@@ -28,7 +26,26 @@ const trackSchema = z.object({
 export async function GET(_request: Request, { params }: RouteParams) {
   try {
     const { id: eventId } = await params
-    const admin = createAdminClient()
+    const auth = await getAuthedAdminClient()
+    if (!auth.ok) return auth.error
+
+    const denied = await requireEventCapabilityResponse(
+      auth.supabaseAdmin,
+      auth.user.id,
+      eventId,
+      'manage_divisions'
+    )
+    if (denied) {
+      const viewDenied = await requireEventCapabilityResponse(
+        auth.supabaseAdmin,
+        auth.user.id,
+        eventId,
+        'view_ops'
+      )
+      if (viewDenied) return denied
+    }
+
+    const admin = auth.supabaseAdmin
     const tracks = await listTracksForEvent(admin, eventId)
     const { data: divisions } = await admin
       .from('divisions')

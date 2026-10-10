@@ -5,6 +5,8 @@
  */
 'use client'
 
+import type { EventOpsPanelProps } from '@/components/admin/event-ops-props'
+
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,7 +30,7 @@ import {
   type ExternalMediaProvider,
 } from '@/lib/media/external'
 
-interface EventMediaPanelProps {
+interface EventMediaPanelProps extends EventOpsPanelProps {
   eventId: string
 }
 
@@ -43,7 +45,7 @@ type MediaRow = {
   sort_order: number
 }
 
-export default function EventMediaPanel({ eventId }: EventMediaPanelProps) {
+export default function EventMediaPanel({ eventId, readOnly = false }: EventMediaPanelProps) {
   const [rows, setRows] = useState<MediaRow[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -132,6 +134,7 @@ export default function EventMediaPanel({ eventId }: EventMediaPanelProps) {
 
   return (
     <div className="space-y-6">
+      {!readOnly && (
       <div className="rounded-lg border p-4 space-y-3">
         <h3 className="font-medium text-sm">Add external link</h3>
         <p className="text-xs text-muted-foreground">
@@ -196,6 +199,7 @@ export default function EventMediaPanel({ eventId }: EventMediaPanelProps) {
           </div>
         </div>
       </div>
+      )}
 
       {loading ? (
         <div className="flex gap-2 text-muted-foreground text-sm py-4">
@@ -234,12 +238,16 @@ export default function EventMediaPanel({ eventId }: EventMediaPanelProps) {
                 >
                   {previewId === r.id ? 'Hide preview' : 'Preview'}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => togglePublic(r)}>
-                  {r.is_public ? 'Public' : 'Hidden'}
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => remove(r.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {!readOnly && (
+                  <>
+                    <Button size="sm" variant="ghost" onClick={() => togglePublic(r)}>
+                      {r.is_public ? 'Public' : 'Hidden'}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => remove(r.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
               </div>
               {previewId === r.id && <MediaEmbed item={r} />}
             </li>

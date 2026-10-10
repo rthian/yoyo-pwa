@@ -10,7 +10,9 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-interface MusicReadinessPanelProps {
+import type { EventOpsPanelProps } from '@/components/admin/event-ops-props'
+
+interface MusicReadinessPanelProps extends EventOpsPanelProps {
   divisionId: string
   eventId?: string
   /** Prompt 16: override music ops link. Callers: organize division page. User: "ok let do Prompt 16" */
@@ -28,6 +30,7 @@ export default function MusicReadinessPanel({
   divisionId,
   eventId,
   eventOpsHref,
+  readOnly = false,
 }: MusicReadinessPanelProps) {
   const [rows, setRows] = useState<Submission[]>([])
   const [loading, setLoading] = useState(true)
@@ -125,6 +128,8 @@ export default function MusicReadinessPanel({
               {r.backup_status && r.backup_status !== 'unknown' && (
                 <Badge variant="secondary">{r.backup_status}</Badge>
               )}
+              {!readOnly && (
+              <>
               <Button size="sm" variant="ghost" onClick={() => setStatus(r.id, 'approved')}>
                 Approve
               </Button>
@@ -134,6 +139,8 @@ export default function MusicReadinessPanel({
               <Button size="sm" variant="ghost" onClick={() => setStatus(r.id, 'rejected')}>
                 Reject
               </Button>
+              </>
+              )}
             </li>
           ))}
         </ul>

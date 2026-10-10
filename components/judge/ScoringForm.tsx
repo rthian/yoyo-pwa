@@ -49,7 +49,7 @@ import type { Division, DivisionMember, Score, Competitor, Ruleset, ScoringType 
 interface ParticipantWithCompetitor extends DivisionMember {
   competitor: Pick<
     Competitor,
-    'id' | 'full_name' | 'nickname' | 'country' | 'public_id' | 'source_member_id'
+    'id' | 'full_name' | 'nickname' | 'country' | 'public_id'
   >
 }
 

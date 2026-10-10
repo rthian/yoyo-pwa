@@ -42,9 +42,13 @@ import { Plus, Loader2, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import SortableParticipantRow from './SortableParticipantRow'
 import type { Member, DivisionMember, DivisionMemberStatus } from '@/lib/types/database'
+import type { EventOpsPanelProps } from '@/components/admin/event-ops-props'
 
-interface DivisionParticipantsProps {
+interface DivisionParticipantsProps extends EventOpsPanelProps {
   divisionId: string
+  canEnroll?: boolean
+  canReorder?: boolean
+  canUpdateStatus?: boolean
 }
 
 type CompetitorEmbed = {
@@ -53,7 +57,6 @@ type CompetitorEmbed = {
   nickname: string | null
   country: string | null
   public_id: string | null
-  source_member_id: string | null
 }
 
 interface ParticipantWithCompetitor extends DivisionMember {
@@ -68,7 +71,16 @@ const statusOptions: { value: DivisionMemberStatus; label: string }[] = [
   { value: 'withdrawn', label: 'Withdrawn' },
 ]
 
-export default function DivisionParticipants({ divisionId }: DivisionParticipantsProps) {
+export default function DivisionParticipants({
+  divisionId,
+  readOnly = false,
+  canEnroll = true,
+  canReorder = true,
+  canUpdateStatus = true,
+}: DivisionParticipantsProps) {
+  const allowEnroll = !readOnly && canEnroll
+  const allowReorder = !readOnly && canReorder
+  const allowStatus = !readOnly && canUpdateStatus
   const [participants, setParticipants] = useState<ParticipantWithCompetitor[]>([])
   const [availableMembers, setAvailableMembers] = useState<Member[]>([])
   const [selectedMemberId, setSelectedMemberId] = useState<string>('')
@@ -223,6 +235,7 @@ export default function DivisionParticipants({ divisionId }: DivisionParticipant
 
   return (
     <div className="space-y-4">
+      {allowEnroll && (
       <div className="flex justify-end">
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogTrigger asChild>
@@ -276,6 +289,7 @@ export default function DivisionParticipants({ divisionId }: DivisionParticipant
           </DialogContent>
         </Dialog>
       </div>
+      )}
 
       {participants.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
@@ -286,7 +300,7 @@ export default function DivisionParticipants({ divisionId }: DivisionParticipant
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
+          onDragEnd={allowReorder ? handleDragEnd : () => {}}
         >
           <Table>
             <TableHeader>
@@ -312,6 +326,10 @@ export default function DivisionParticipants({ divisionId }: DivisionParticipant
                     statusOptions={statusOptions}
                     onStatusChange={handleStatusChange}
                     onRemove={handleRemove}
+                    readOnly={!allowReorder && !allowStatus && !allowEnroll}
+                    allowReorder={allowReorder}
+                    allowStatus={allowStatus}
+                    allowRemove={allowEnroll}
                   />
                 ))}
               </SortableContext>

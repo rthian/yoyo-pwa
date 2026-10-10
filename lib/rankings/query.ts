@@ -6,6 +6,7 @@
  * User: "ok next"
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { mapSelfAccountIdsForCompetitors } from '@/lib/identity/competitors'
 import type { DivisionFilter, Gender, LeagueRankingEntry } from './types'
 
 export interface RankingsQuery {
@@ -45,7 +46,6 @@ type PointsRow = {
   event_id: string
   competitors: {
     id: string
-    source_member_id: string | null
     full_name: string
     nickname: string | null
     country: string | null
@@ -161,7 +161,6 @@ export async function getLeagueRankings(
       event_id,
       competitors!inner (
         id,
-        source_member_id,
         full_name,
         nickname,
         country,
@@ -228,7 +227,7 @@ export async function getLeagueRankings(
     )
     competitorById.set(competitorId, {
       competitorId,
-      memberId: c.source_member_id ?? null,
+      memberId: null,
       full_name: c.full_name,
       nickname: c.nickname,
       country: c.country,
@@ -239,6 +238,14 @@ export async function getLeagueRankings(
       geo_name: geo?.name ?? null,
       iso_alpha2: geo?.iso_alpha2 ?? null,
     })
+  }
+
+  const accountByCompetitor = await mapSelfAccountIdsForCompetitors(
+    supabase,
+    [...competitorById.keys()]
+  )
+  for (const [competitorId, agg] of competitorById) {
+    agg.memberId = accountByCompetitor.get(competitorId) ?? null
   }
 
   const search = query.search?.trim().toLowerCase() ?? ''

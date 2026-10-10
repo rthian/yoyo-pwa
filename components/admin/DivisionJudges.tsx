@@ -33,8 +33,9 @@ import { Switch } from '@/components/ui/switch'
 import { Plus, Trash2, Loader2, Gavel } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Member, DivisionJudge, JudgeType } from '@/lib/types/database'
+import type { EventOpsPanelProps } from '@/components/admin/event-ops-props'
 
-interface DivisionJudgesProps {
+interface DivisionJudgesProps extends EventOpsPanelProps {
   divisionId: string
 }
 
@@ -50,7 +51,7 @@ const judgeTypeOptions: { value: JudgeType; label: string }[] = [
   { value: 'shadow', label: 'Shadow (training)' },
 ]
 
-export default function DivisionJudges({ divisionId }: DivisionJudgesProps) {
+export default function DivisionJudges({ divisionId, readOnly = false }: DivisionJudgesProps) {
   const [judges, setJudges] = useState<JudgeWithMember[]>([])
   const [availableJudges, setAvailableJudges] = useState<Member[]>([])
   const [selectedJudgeId, setSelectedJudgeId] = useState<string>('')
@@ -190,6 +191,7 @@ export default function DivisionJudges({ divisionId }: DivisionJudgesProps) {
 
   return (
     <div className="space-y-4">
+      {!readOnly && (
       <div className="flex justify-end">
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogTrigger asChild>
@@ -266,6 +268,7 @@ export default function DivisionJudges({ divisionId }: DivisionJudgesProps) {
           </DialogContent>
         </Dialog>
       </div>
+      )}
 
       {judges.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
@@ -291,6 +294,9 @@ export default function DivisionJudges({ divisionId }: DivisionJudgesProps) {
                   {judge.member.email}
                 </TableCell>
                 <TableCell>
+                  {readOnly ? (
+                    <span className="text-sm capitalize">{judge.judge_type.replace(/_/g, ' ')}</span>
+                  ) : (
                   <Select
                     value={judge.judge_type}
                     onValueChange={(value) =>
@@ -308,10 +314,15 @@ export default function DivisionJudges({ divisionId }: DivisionJudgesProps) {
                       ))}
                     </SelectContent>
                   </Select>
+                  )}
                 </TableCell>
                 <TableCell>
                   {judge.judge_type === 'shadow' ? (
                     <span className="text-muted-foreground text-sm">No (training)</span>
+                  ) : readOnly ? (
+                    <span className="text-sm">
+                      {judge.scores_included_in_leaderboard !== false ? 'Yes' : 'No'}
+                    </span>
                   ) : (
                     <Switch
                       checked={judge.scores_included_in_leaderboard !== false}
@@ -322,6 +333,7 @@ export default function DivisionJudges({ divisionId }: DivisionJudgesProps) {
                   )}
                 </TableCell>
                 <TableCell className="text-right">
+                  {!readOnly && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -329,6 +341,7 @@ export default function DivisionJudges({ divisionId }: DivisionJudgesProps) {
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

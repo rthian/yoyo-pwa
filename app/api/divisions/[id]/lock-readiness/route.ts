@@ -77,7 +77,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const { data: participants } = await auth.supabaseAdmin
       .from('division_members')
       .select(
-        'id, competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)'
+        'id, competitor:competitors(id, full_name, nickname, country, public_id)'
       )
       .eq('division_id', divisionId)
 

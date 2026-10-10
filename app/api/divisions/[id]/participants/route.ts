@@ -44,7 +44,7 @@ export async function GET(
       .from('division_members')
       .select(`
         *,
-        competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)
+        competitor:competitors(id, full_name, nickname, country, public_id)
       `)
       .eq('division_id', divisionId)
       .order('play_order', { ascending: true })
@@ -53,15 +53,17 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    type CompetitorEmbed = { source_member_id?: string | null } | null
-    const enrolledAccountIds = (participants ?? [])
-      .map((p) => {
-        const raw = (p as { competitor?: CompetitorEmbed | CompetitorEmbed[] })
-          .competitor
-        const c = Array.isArray(raw) ? raw[0] : raw
-        return c?.source_member_id ?? null
-      })
+    const competitorIds = (participants ?? [])
+      .map((p) => (p as { competitor_id?: string }).competitor_id)
       .filter((id): id is string => Boolean(id))
+    const { mapSelfAccountIdsForCompetitors } = await import(
+      '@/lib/identity/competitors'
+    )
+    const accountByCompetitor = await mapSelfAccountIdsForCompetitors(
+      auth.supabaseAdmin,
+      competitorIds
+    )
+    const enrolledAccountIds = [...accountByCompetitor.values()]
 
     // Slice E: account list + composed profile for picker. User: "next"
     const query = auth.supabaseAdmin

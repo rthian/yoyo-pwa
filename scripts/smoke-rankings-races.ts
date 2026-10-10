@@ -89,9 +89,10 @@ async function main() {
   // User: "next"
   const { data: anyCompetitor } = anyMember
     ? await sb
-        .from('competitors')
-        .select('id')
-        .eq('source_member_id', anyMember.id)
+        .from('account_competitor_links')
+        .select('competitor_id')
+        .eq('account_id', anyMember.id)
+        .eq('relationship', 'self')
         .maybeSingle()
     : { data: null }
 
@@ -102,7 +103,7 @@ async function main() {
         season_id: seasonId,
         event_id: anyEvent.id,
         category_id: cat.id,
-        competitor_id: anyCompetitor.id,
+        competitor_id: anyCompetitor.competitor_id,
         round_type: 'final',
         placement: 1,
         field_size: 1,
@@ -135,10 +136,10 @@ async function main() {
       })
       const inNational = afterNat.entries.some(
         (e) =>
-          e.competitorId === anyCompetitor.id && e.totalPoints >= 9999
+          e.competitorId === anyCompetitor.competitor_id && e.totalPoints >= 9999
       )
       const inEventBoard = eventBoard.entries.some(
-        (e) => e.competitorId === anyCompetitor.id
+        (e) => e.competitorId === anyCompetitor.competitor_id
       )
 
       checks.push({

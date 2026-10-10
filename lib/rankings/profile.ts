@@ -8,13 +8,13 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Gender, PlayerProfile } from './types'
+import { getSelfAccountIdForCompetitor } from '@/lib/identity/competitors'
 
 const COMPETITOR_SELECT =
-  'id, source_member_id, public_id, full_name, nickname, country, home_geo_id, gender, bio, avatar_url, first_competed_on, created_at, is_active, profile_visibility'
+  'id, public_id, full_name, nickname, country, home_geo_id, gender, bio, avatar_url, first_competed_on, created_at, is_active, profile_visibility'
 
 type CompetitorRow = {
   id: string
-  source_member_id: string | null
   public_id: string | null
   full_name: string
   nickname: string | null
@@ -65,17 +65,6 @@ async function resolveCompetitor(
         .from('competitors')
         .select(COMPETITOR_SELECT)
         .eq('id', publicIdOrUuid)
-        .maybeSingle()
-    ).data as CompetitorRow | null
-  }
-
-  // Legacy URL: members.id → self competitor
-  if (!competitor) {
-    competitor = (
-      await supabase
-        .from('competitors')
-        .select(COMPETITOR_SELECT)
-        .eq('source_member_id', publicIdOrUuid)
         .maybeSingle()
     ).data as CompetitorRow | null
   }
@@ -240,7 +229,7 @@ export async function getPlayerProfile(
 
   return {
     id: competitor.id,
-    accountMemberId: competitor.source_member_id,
+    accountMemberId: await getSelfAccountIdForCompetitor(supabase, competitor.id),
     publicId: competitor.public_id,
     fullName: competitor.full_name,
     nickname: competitor.nickname,

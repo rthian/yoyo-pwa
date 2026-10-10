@@ -65,7 +65,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       .select(`
         id,
         play_order,
-        competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)
+        competitor:competitors(id, full_name, nickname, country, public_id)
       `)
       .eq('division_id', divisionId)
       .order('play_order', { ascending: true })
