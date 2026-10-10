@@ -1,9 +1,9 @@
 # Account vs Competitor Identity
 
-**Status:** Slice A–D2 shipped · E deferred  
-**Referenced by:** `CLAUDE.md` migrations, `lib/identity/competitors.ts`, `021_identity_slice_b_dual_columns.sql`  
-**Glob:** no prior docs/IDENTITY_ADR.md  
-**User:** "yes"
+**Status:** Slice A–E shipped  
+**Referenced by:** `CLAUDE.md` migrations, `lib/identity/account-profile.ts`, `024_identity_slice_e_drop_member_profile_cols.sql`  
+**Glob:** existing IDENTITY_ADR.md  
+**User:** "next"
 
 ## Decision
 
@@ -42,7 +42,13 @@
 - App cutover: `division_members` embeds → `competitor:competitors`; my-* filters use `getCompetitorIdsForAccount`.
 - Migration drops `member_id` on the five tables; drops fill triggers; RPC inserts competitor-only.
 - `division_judges.member_id` and `scores.judge_id` unchanged (Auth accounts).
-- **E** (strip competition columns from `members`) still deferred.
+
+## Slice E notes (`024`)
+
+- App: `composeMember` / `getComposedMember` overlays self-competitor profile onto account row for `/api/member/me` and admin UI.
+- Writes: signup/register/profile/admin update competition fields on `competitors` only; `members` keeps `full_name` as staff display name.
+- Migration drops `public_id`, `nickname`, `country`, `home_geo_id`, `gender`, `avatar_url`, `bio`, `profile_visibility`, `first_competed_on` from `members`; drops `public_members`.
+- `competitors.source_member_id` retained (optional later cleanup).
 
 ## Slice C notes (no migration)
 

@@ -66,26 +66,53 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
     }
 
-    const { data: member, error: memberError } = await supabaseAdmin
+    // Slice E: account cols on members; profile → competitors.
+    // Callers: MemberForm create. Glob: existing. Sample: { email, full_name, role }.
+    // User: "next"
+    const {
+      email: memberEmail,
+      full_name,
+      role,
+      is_active,
+      nickname,
+      country,
+      home_geo_id,
+    } = validationResult.data
+
+    const { data: account, error: memberError } = await supabaseAdmin
       .from('members')
       .insert({
         id: authData.user.id,
-        ...validationResult.data,
-        public_id: publicId,
+        email: memberEmail,
+        full_name,
+        role,
+        is_active,
       })
-      .select()
+      .select('id, email, full_name, role, is_active, created_at, updated_at')
       .single()
 
-    if (memberError) {
+    if (memberError || !account) {
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
-      return NextResponse.json({ error: memberError.message }, { status: 500 })
+      return NextResponse.json(
+        { error: memberError?.message || 'Failed to create member' },
+        { status: 500 }
+      )
     }
 
     try {
-      await ensureSelfCompetitorForMember(supabaseAdmin, member, {
-        publicId,
-        grantedBy: user.id,
-      })
+      await ensureSelfCompetitorForMember(
+        supabaseAdmin,
+        {
+          id: account.id,
+          full_name,
+          nickname: nickname ?? null,
+          country: country ?? null,
+          home_geo_id: home_geo_id ?? null,
+          public_id: publicId,
+          is_active,
+        },
+        { publicId, grantedBy: user.id }
+      )
     } catch (identityError) {
       console.error('Signup identity error:', identityError)
       await supabaseAdmin.from('members').delete().eq('id', authData.user.id)
@@ -100,6 +127,9 @@ export async function POST(request: Request) {
         { status: 500 }
       )
     }
+
+    const { getComposedMember } = await import('@/lib/identity/account-profile')
+    const member = await getComposedMember(supabaseAdmin, account.id)
 
     return NextResponse.json({ member }, { status: 201 })
   } catch (error) {

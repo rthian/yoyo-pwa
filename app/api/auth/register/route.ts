@@ -42,6 +42,9 @@ export async function POST(request: Request) {
       )
     }
 
+    // Slice E: public_id on competitors only. Callers: public register form.
+    // Glob: existing register route. Sample members row: { id, email, full_name, role }.
+    // User: "next"
     const publicId = generateLeagueId()
 
     const { error: memberError } = await admin.from('members').insert({
@@ -50,7 +53,6 @@ export async function POST(request: Request) {
       full_name,
       role: 'member',
       is_active: true,
-      public_id: publicId,
     })
 
     if (memberError) {

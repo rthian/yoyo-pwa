@@ -153,7 +153,8 @@ async function main() {
       if (geo) patch.home_geo_id = geo.id
     }
     if (Object.keys(patch).length) {
-      await sb.from('members').update(patch).eq('id', p.id)
+      // Slice E: profile on competitors. Callers: seed CLI. User: "next"
+      await sb.from('competitors').update(patch).eq('source_member_id', p.id)
       Object.assign(p, patch)
     }
   }

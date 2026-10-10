@@ -45,16 +45,60 @@ export async function PATCH(
       )
     }
 
-    const { data: member, error } = await supabaseAdmin
+    // GateGuard: callers MemberForm; Glob existing route;
+    // Sample update: { email, full_name, role, nickname }. User: "next"
+    const {
+      email,
+      full_name,
+      role,
+      is_active,
+      nickname,
+      country,
+      home_geo_id,
+    } = validationResult.data
+
+    const { data: account, error } = await supabaseAdmin
       .from('members')
-      .update(validationResult.data)
+      .update({ email, full_name, role, is_active })
       .eq('id', id)
-      .select()
+      .select('id, email, full_name, role, is_active, created_at, updated_at')
       .single()
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error || !account) {
+      return NextResponse.json(
+        { error: error?.message || 'Update failed' },
+        { status: 500 }
+      )
     }
+
+    const { getCompetitorIdForMember, ensureSelfCompetitorForMember } =
+      await import('@/lib/identity/competitors')
+    let competitorId = await getCompetitorIdForMember(supabaseAdmin, id)
+    if (!competitorId) {
+      const ensured = await ensureSelfCompetitorForMember(supabaseAdmin, {
+        id,
+        full_name,
+        nickname: nickname ?? null,
+        country: country ?? null,
+        home_geo_id: home_geo_id ?? null,
+        is_active,
+      })
+      competitorId = ensured.competitor.id
+    } else {
+      await supabaseAdmin
+        .from('competitors')
+        .update({
+          full_name,
+          nickname: nickname ?? null,
+          country: country ?? null,
+          home_geo_id: home_geo_id ?? null,
+          is_active,
+        })
+        .eq('id', competitorId)
+    }
+
+    const { getComposedMember } = await import('@/lib/identity/account-profile')
+    const member = await getComposedMember(supabaseAdmin, id)
 
     return NextResponse.json({ member })
   } catch (error) {

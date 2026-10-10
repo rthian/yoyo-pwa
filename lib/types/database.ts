@@ -111,13 +111,21 @@ export interface EventExternalMedia {
   updated_at: string
 }
 
+/**
+ * Auth account. Slice E DB: id/email/full_name/role/is_active/timestamps.
+ * Profile fields are API overlays from self competitor (composeMember).
+ * GateGuard: callers auth/UI; Glob existing; User: "next"
+ */
 export interface Member {
   id: string
   email: string
   full_name: string
-  nickname: string | null
   role: MemberRole
-  country: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  nickname?: string | null
+  country?: string | null
   home_geo_id?: string | null
   gender?: 'female' | 'male' | 'other' | 'undisclosed' | null
   public_id?: string | null
@@ -125,9 +133,6 @@ export interface Member {
   bio?: string | null
   profile_visibility?: ProfileVisibility | null
   first_competed_on?: string | null
-  is_active: boolean
-  created_at: string
-  updated_at: string
 }
 
 /** Persistent competition identity (Slice A). Not an Auth UID. */

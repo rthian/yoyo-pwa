@@ -87,8 +87,8 @@ async function main() {
       full_name: 'Identity Smoke',
       role: 'member',
       is_active: true,
-      public_id: publicId,
     })
+    // Slice E: public_id on competitors only. Callers: smoke CLI. User: "next"
     checks.push({ name: 'create_temp_member', ok: !memErr, detail: memErr?.message })
 
     if (!memErr) {
