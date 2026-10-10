@@ -171,8 +171,9 @@ Applied in order from `supabase/migrations/`:
 15. Prompt 14–15 (no migration): `lib/media/embed.ts` + `MediaEmbed` click-to-load players on hub
 16. Prompt 16 (no migration): `/organize` + `lib/organize/access.ts` + capability-gated staff panels
 17. Prompt 17 (no migration): guardian/managed competitors — `/member/competitors`, register/music selectors
+18. `026_registration_payments.sql` — Prompt 20: event payment config + `registration_receipts` (private bucket `registration-receipts`)
 
-**Planned (17+):** [`docs/PROMPTS_17_PLUS.md`](docs/PROMPTS_17_PLUS.md) — **17 guardians (shipped, no migration)**, advancement (18), organize lifecycle (19), QR/receipt payments (20), hub (21), **comms & notifications (22)**, hygiene (23).
+**Planned (17+):** [`docs/PROMPTS_17_PLUS.md`](docs/PROMPTS_17_PLUS.md) — **17 guardians (shipped)**, advancement (18), organize lifecycle (19), **20 QR/receipts (shipped, mig 026)**, hub (21), **comms & notifications (22)**, hygiene (23).
 
 ---
 

@@ -8,6 +8,7 @@ import {
   assertManagesCompetitor,
   getCompetitorIdForMember,
 } from '@/lib/identity/competitors'
+import { applyPaymentRequiredOnRegistration } from '@/lib/payments/receipts'
 import type {
   Registration,
   RegistrationEntry,
@@ -367,6 +368,12 @@ export async function registerCompetitorForDivision(
     accountId: params.accountId,
     isAdmin: params.isAdmin,
   })
+
+  await applyPaymentRequiredOnRegistration(
+    supabase,
+    registration.id,
+    division.event_id
+  )
 
   const entry = await addRegistrationEntry(supabase, {
     registrationId: registration.id,
