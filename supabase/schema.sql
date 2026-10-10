@@ -1,5 +1,11 @@
 -- YoYo Event Management System Database Schema
--- Run this SQL in your Supabase SQL Editor
+--
+-- SOURCE OF TRUTH for greenfield / upgrades: supabase/migrations/*.sql (001 → 027+).
+-- This file is a bootstrap snapshot of early core tables and may lag migrations.
+-- Prefer applying migrations in numeric order (see docs/DEPLOYMENT.md).
+--
+-- Run this SQL in your Supabase SQL Editor only for a minimal bootstrap;
+-- then apply migrations 004+ (or re-run the full migration series on a fresh project).
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

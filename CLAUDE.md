@@ -148,7 +148,7 @@ Key tables (full schema in `supabase/schema.sql`, TypeScript types in `lib/types
 ### Migrations
 
 Applied in order from `supabase/migrations/`:
-1. `001_*` — base schema (covered by `schema.sql`)
+1. `001_*` — base schema (also sketched in `schema.sql`; **greenfield: apply all migrations 001→latest**)
 2. `002_scoring_lock_and_hide.sql` — adds `scoring_locked` and `hide_scores_until_complete` to `divisions`
 3. `003_judge_included_and_shadow.sql` — adds `scores_included_in_leaderboard` to `division_judges`; extends `judge_type` with `shadow`
 4. `004`–`010` — league rankings, profiles, races, field_scope, major deduction counts
@@ -174,7 +174,7 @@ Applied in order from `supabase/migrations/`:
 18. `026_registration_payments.sql` — Prompt 20: event payment config + `registration_receipts` (private bucket `registration-receipts`)
 19. `027_comms_notifications.sql` — Prompt 22: `notification_preferences`, `comms_outbox`, `event_comms_log`
 
-**Planned (17+):** [`docs/PROMPTS_17_PLUS.md`](docs/PROMPTS_17_PLUS.md) — **17 guardians**, **18 advancement (shipped)**, **19 lifecycle (shipped)**, **20 QR/receipts (026)**, **21 hub polish (shipped)**, **22 comms (027)**, hygiene (23).
+**Planned (17+):** [`docs/PROMPTS_17_PLUS.md`](docs/PROMPTS_17_PLUS.md) — **17–22 shipped**; **23 hygiene (shipped)** — migrations source of truth, CI `npm test`, RLS doc.
 
 ---
 
@@ -329,7 +329,7 @@ See `docs/RLS_WORKAROUND.md` for the full explanation and the SQL fix that can b
 
 Full guide at `docs/DEPLOYMENT.md`. Summary:
 
-1. Create a Supabase project and run `supabase/schema.sql`
+1. Create a Supabase project and apply `supabase/migrations/` in order (`001`→latest); see `docs/DEPLOYMENT.md`
 2. Set environment variables on Vercel (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`)
 3. Deploy via Vercel (framework auto-detected as Next.js)
 4. Create the first admin user: `node scripts/create-admin.js`
@@ -355,10 +355,10 @@ The `vercel.json` is pre-configured with security headers and correct cache poli
 
 ### New Database Table
 
-1. Add the table to `supabase/schema.sql`.
-2. Create a timestamped migration in `supabase/migrations/`.
+1. Create a timestamped migration in `supabase/migrations/` (source of truth).
+2. Optionally note the change in `supabase/schema.sql` if you maintain the bootstrap snapshot.
 3. Add TypeScript types to `lib/types/database.ts`.
-4. Consider RLS policies and whether the admin client workaround applies.
+4. Prefer `is_admin()` / `createAdminClient()` for role checks (see `docs/RLS_WORKAROUND.md`).
 
 ### New shadcn/ui Component
 

@@ -23,12 +23,33 @@ This guide walks you through deploying YoYo League to production.
 
 ### Apply Database Schema
 
-1. In your Supabase project, go to **SQL Editor**
-2. Click "New query"
-3. Copy the entire contents of `supabase/schema.sql`
-4. Paste into the editor
-5. Click "Run" to execute
-6. You should see "Success" messages
+**Source of truth:** `supabase/migrations/` applied in filename order (`001` … `027`+).
+
+#### Recommended (greenfield)
+
+1. In Supabase → **SQL Editor** → New query
+2. Open each file in `supabase/migrations/` in numeric order
+3. Paste and **Run** each migration (or concatenate and run in one session if preferred)
+4. Confirm success after each file (or after the batch)
+
+You do **not** need `schema.sql` if you apply the full migration series.
+
+#### Optional bootstrap
+
+`supabase/schema.sql` is an early snapshot (core tables only) and **lags** later migrations. If you use it, you must still apply migrations from `004` onward through the latest (`027`+).
+
+#### Storage buckets (manual)
+
+Create these private buckets in Supabase Storage if the app uses the features:
+
+| Bucket | Used by |
+|--------|---------|
+| `competition-music` | Music uploads |
+| `registration-receipts` | Payment receipt uploads (Prompt 20) |
+
+#### Comms / cron (optional)
+
+On Vercel, set `CRON_SECRET` (and optional `RESEND_API_KEY`, `COMMS_FROM_EMAIL`, `NEXT_PUBLIC_APP_URL`) so `/api/cron/comms` can send reminders.
 
 ### Get API Credentials
 

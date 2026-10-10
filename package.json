@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run typecheck && npm run test:unit",
+    "smoke:judge-analytics": "npx tsx scripts/smoke-judge-analytics.ts",
+    "test:unit": "npx tsx scripts/smoke-judge-analytics.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
