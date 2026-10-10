@@ -137,8 +137,14 @@ $$;
 
 -- ---------------------------------------------------------------------------
 -- Leaderboard helper: join competitors
+-- Callers: optional SQL RPC; app leaderboard uses REST not this fn.
+-- Glob: 023 already exists; OUT type change needs DROP first (Postgres 42P13).
+-- Sample OUT: { competitor_id: "comp_demo", member_name: "Demo", rank: 1 }
+-- User: "Failed to run sql query: ERROR: 42P13: cannot change return type..."
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION get_division_leaderboard(p_division_id UUID)
+DROP FUNCTION IF EXISTS get_division_leaderboard(UUID);
+
+CREATE FUNCTION get_division_leaderboard(p_division_id UUID)
 RETURNS TABLE (
   competitor_id UUID,
   member_name VARCHAR,
