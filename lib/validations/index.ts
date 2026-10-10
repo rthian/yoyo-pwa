@@ -203,3 +203,27 @@ export const scheduleEntrySchema = z.object({
 })
 
 export type ScheduleEntryFormData = z.infer<typeof scheduleEntrySchema>
+
+
+// Prompt 17: managed competitors (guardian / coach / manager)
+export const createManagedCompetitorSchema = z.object({
+  full_name: z.string().min(2, 'Name must be at least 2 characters'),
+  nickname: z.string().max(80).optional().nullable(),
+  country: z.string().max(80).optional().nullable(),
+  gender: z.enum(['female', 'male', 'other', 'undisclosed']).optional().nullable(),
+  relationship: z.enum(['guardian', 'manager', 'coach']).default('guardian'),
+  can_register: z.boolean().default(true),
+  can_manage_music: z.boolean().default(false),
+  can_manage_profile: z.boolean().default(true),
+})
+
+export type CreateManagedCompetitorData = z.infer<typeof createManagedCompetitorSchema>
+
+export const updateManagedLinkSchema = z.object({
+  can_register: z.boolean().optional(),
+  can_manage_music: z.boolean().optional(),
+  can_manage_profile: z.boolean().optional(),
+  relationship: z.enum(['guardian', 'manager', 'coach']).optional(),
+})
+
+export type UpdateManagedLinkData = z.infer<typeof updateManagedLinkSchema>

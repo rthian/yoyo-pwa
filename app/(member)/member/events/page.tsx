@@ -1,10 +1,12 @@
 /**
- * Member Events Browse Page
- * Browse available events and register for divisions
+ * Member Events Browse — Prompt 17: register as selected managed competitor.
+ * Callers: MemberHeader → /member/events
+ * Sample: competitor_id on register body when guardian selected
+ * User: "Start build"
  */
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +22,9 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import CompetitorSelector, {
+  type SelectableCompetitor,
+} from '@/components/member/CompetitorSelector'
 
 interface BrowseEvent {
   id: string
@@ -40,16 +45,34 @@ interface BrowseEvent {
     scheduled_end: string | null
     venue: string | null
     is_registered: boolean
+    registered_competitor_ids: string[]
     participant_count: number
   }>
 }
 
 export default function MemberEventsPage() {
   const [events, setEvents] = useState<BrowseEvent[]>([])
+  const [competitors, setCompetitors] = useState<SelectableCompetitor[]>([])
+  const [selectedCompetitorId, setSelectedCompetitorId] = useState('')
   const [loading, setLoading] = useState(true)
   const [registeringId, setRegisteringId] = useState<string | null>(null)
 
-  const fetchEvents = async () => {
+  const fetchCompetitors = useCallback(async () => {
+    const res = await fetch('/api/member/competitors')
+    if (!res.ok) return
+    const data = await res.json()
+    const list = (data.competitors || []) as SelectableCompetitor[]
+    setCompetitors(list)
+    setSelectedCompetitorId((prev) => {
+      if (prev && list.some((c) => c.id === prev)) return prev
+      const self = list.find((c) => c.link.relationship === 'self')
+      const registerable =
+        list.find((c) => c.link.can_register) || self || list[0]
+      return registerable?.id || ''
+    })
+  }, [])
+
+  const fetchEvents = useCallback(async () => {
     try {
       const response = await fetch('/api/events/browse')
       if (response.ok) {
@@ -62,13 +85,28 @@ export default function MemberEventsPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  useEffect(() => {
-    fetchEvents()
   }, [])
 
-  const handleRegistration = async (divisionId: string, isRegistered: boolean) => {
+  useEffect(() => {
+    fetchCompetitors()
+    fetchEvents()
+  }, [fetchCompetitors, fetchEvents])
+
+  const isRegisteredForSelected = (division: BrowseEvent['divisions'][0]) => {
+    if (!selectedCompetitorId) return division.is_registered
+    return (division.registered_competitor_ids || []).includes(
+      selectedCompetitorId
+    )
+  }
+
+  const handleRegistration = async (
+    divisionId: string,
+    isRegistered: boolean
+  ) => {
+    if (!selectedCompetitorId) {
+      toast.error('Select a competitor first')
+      return
+    }
     setRegisteringId(divisionId)
     try {
       const response = await fetch('/api/member/events/register', {
@@ -76,6 +114,7 @@ export default function MemberEventsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           division_id: divisionId,
+          competitor_id: selectedCompetitorId,
           action: isRegistered ? 'unregister' : 'register',
         }),
       })
@@ -85,8 +124,9 @@ export default function MemberEventsPage() {
         throw new Error(result.error || 'Registration failed')
       }
 
-      toast.success(isRegistered ? 'Unregistered successfully' : 'Registered successfully!')
-      // Refresh events to update UI
+      toast.success(
+        isRegistered ? 'Unregistered successfully' : 'Registered successfully!'
+      )
       await fetchEvents()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Registration failed')
@@ -107,7 +147,10 @@ export default function MemberEventsPage() {
 
   const formatTime = (dateStr: string | null) => {
     if (!dateStr) return null
-    return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    return new Date(dateStr).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
   }
 
   const roundTypeLabels: Record<string, string> = {
@@ -134,11 +177,20 @@ export default function MemberEventsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Browse Events</h1>
-        <p className="text-muted-foreground mt-1">
-          Find upcoming events and register for divisions
-        </p>
+      <div className="mb-8 space-y-4">
+        <div>
+          <h1 className="text-3xl font-bold">Browse Events</h1>
+          <p className="text-muted-foreground mt-1">
+            Find upcoming events and register for divisions
+          </p>
+        </div>
+        <CompetitorSelector
+          competitors={competitors}
+          value={selectedCompetitorId}
+          onChange={setSelectedCompetitorId}
+          capability="register"
+          label="Registering as"
+        />
       </div>
 
       {events.length === 0 ? (
@@ -159,12 +211,17 @@ export default function MemberEventsPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <CardTitle className="text-xl">
-                      <Link href={`/events/${event.id}`} className="hover:underline">
+                      <Link
+                        href={`/events/${event.id}`}
+                        className="hover:underline"
+                      >
                         {event.name}
                       </Link>
                     </CardTitle>
                     {event.description && (
-                      <CardDescription className="mt-1">{event.description}</CardDescription>
+                      <CardDescription className="mt-1">
+                        {event.description}
+                      </CardDescription>
                     )}
                   </div>
                   <div className="flex gap-2 flex-shrink-0 items-start flex-wrap justify-end">
@@ -172,7 +229,10 @@ export default function MemberEventsPage() {
                       {event.status.replace('_', ' ')}
                     </Badge>
                     {event.registration_open && (
-                      <Badge variant="outline" className="border-green-500 text-green-700">
+                      <Badge
+                        variant="outline"
+                        className="border-green-500 text-green-700"
+                      >
                         Registration Open
                       </Badge>
                     )}
@@ -204,88 +264,101 @@ export default function MemberEventsPage() {
                   Divisions
                 </h4>
                 <div className="space-y-3">
-                  {event.divisions.map((division) => (
-                    <div
-                      key={division.id}
-                      className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/30 transition-colors"
-                    >
-                      <div className="flex-1 min-w-0 mr-4">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium">{division.name}</span>
-                          {division.round_type && (
-                            <Badge variant="outline" className="text-xs">
-                              {roundTypeLabels[division.round_type] || division.round_type}
+                  {event.divisions.map((division) => {
+                    const registered = isRegisteredForSelected(division)
+                    return (
+                      <div
+                        key={division.id}
+                        className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/30 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0 mr-4">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium">{division.name}</span>
+                            {division.round_type && (
+                              <Badge variant="outline" className="text-xs">
+                                {roundTypeLabels[division.round_type] ||
+                                  division.round_type}
+                              </Badge>
+                            )}
+                            <Badge variant="secondary" className="text-xs">
+                              {division.scoring_type}
                             </Badge>
+                          </div>
+                          {division.description && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {division.description}
+                            </p>
                           )}
-                          <Badge variant="secondary" className="text-xs">
-                            {division.scoring_type}
-                          </Badge>
-                        </div>
-                        {division.description && (
-                          <p className="text-sm text-muted-foreground mt-1">{division.description}</p>
-                        )}
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
-                          <span className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {division.participant_count}
-                            {division.max_participants && ` / ${division.max_participants}`}
-                            {' participants'}
-                          </span>
-                          {division.scheduled_start && (
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
                             <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {formatTime(division.scheduled_start)}
+                              <Users className="h-3 w-3" />
+                              {division.participant_count}
+                              {division.max_participants &&
+                                ` / ${division.max_participants}`}
+                              {' participants'}
                             </span>
-                          )}
-                          {division.venue && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {division.venue}
-                            </span>
-                          )}
+                            {division.scheduled_start && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {formatTime(division.scheduled_start)}
+                              </span>
+                            )}
+                            {division.venue && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {division.venue}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Registration Button */}
-                      <div className="flex-shrink-0">
-                        {division.is_registered ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRegistration(division.id, true)}
-                            disabled={registeringId === division.id}
-                            className="text-green-700 border-green-300 hover:bg-green-50"
-                          >
-                            {registeringId === division.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <>
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Registered
-                              </>
-                            )}
-                          </Button>
-                        ) : event.registration_open ? (
-                          <Button
-                            size="sm"
-                            onClick={() => handleRegistration(division.id, false)}
-                            disabled={registeringId === division.id}
-                          >
-                            {registeringId === division.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <>
-                                <UserPlus className="h-4 w-4 mr-1" />
-                                Register
-                              </>
-                            )}
-                          </Button>
-                        ) : (
-                          <Badge variant="secondary">Closed</Badge>
-                        )}
+                        <div className="flex-shrink-0">
+                          {registered ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handleRegistration(division.id, true)
+                              }
+                              disabled={registeringId === division.id}
+                              className="text-green-700 border-green-300 hover:bg-green-50"
+                            >
+                              {registeringId === division.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Registered
+                                </>
+                              )}
+                            </Button>
+                          ) : event.registration_open ? (
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                handleRegistration(division.id, false)
+                              }
+                              disabled={
+                                registeringId === division.id ||
+                                !selectedCompetitorId
+                              }
+                            >
+                              {registeringId === division.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <UserPlus className="h-4 w-4 mr-1" />
+                                  Register
+                                </>
+                              )}
+                            </Button>
+                          ) : (
+                            <Badge variant="secondary">Closed</Badge>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>

@@ -1,6 +1,6 @@
 # Prompts 17+ — Product playbook
 
-**Status:** Planning (post–Prompt 16 on `main`, identity through `025`)  
+**Status:** Prompt **17** implemented on app (guardians); 18+ still planned. Identity through `025`.  
 **Payments:** Manual QR + receipt verification (**20**); Stripe deferred.
 
 ---
@@ -23,10 +23,12 @@
 
 ## Prompt 17 — Guardian & multi-competitor accounts
 
+**Shipped (app):** `/member/competitors`, `GET|POST /api/member/competitors`, `PATCH|DELETE /api/member/competitors/links/[id]`, `CompetitorSelector` on Events + Music, `registerCompetitorForDivision` + `competitor_id` on register API. No new migration (optional invites deferred).
+
 - Member UI: manage `account_competitor_links` (`self`, `guardian`, `manager`, `coach`) and capability flags.
 - APIs: create competitor + link; revoke with audit (`granted_by`).
 - Registration & music: competitor selector; `assertManagesCompetitor` enforced in UI and API.
-- **Acceptance:** Parent registers and pays (20) / uploads music for a child competitor.
+- **Acceptance:** Parent registers child; guardian without `can_manage_music` cannot upload (API 403 + music UI filter). Payment (20) still pending.
 
 ---
 

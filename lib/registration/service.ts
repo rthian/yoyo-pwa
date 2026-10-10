@@ -316,11 +316,17 @@ export async function cancelRegistration(
 }
 
 /**
- * Legacy hub toggle: register account's self competitor into one division.
+ * Register a managed competitor into one division (defaults to self).
+ * Prompt 17: pass competitorId for guardian/manager registration.
  */
-export async function registerSelfForDivision(
+export async function registerCompetitorForDivision(
   supabase: SupabaseClient,
-  params: { accountId: string; divisionId: string; isAdmin?: boolean }
+  params: {
+    accountId: string
+    divisionId: string
+    competitorId?: string | null
+    isAdmin?: boolean
+  }
 ): Promise<{ registration: Registration; entry: RegistrationEntry }> {
   const { data: division } = await supabase
     .from('divisions')
@@ -329,19 +335,30 @@ export async function registerSelfForDivision(
     .single()
   if (!division) throw new Error('Division not found')
 
-  let competitorId = await getCompetitorIdForMember(supabase, params.accountId)
+  let competitorId = params.competitorId ?? null
   if (!competitorId) {
-    const { data: member } = await supabase
-      .from('members')
-      .select('id, full_name, nickname, country, public_id, is_active')
-      .eq('id', params.accountId)
-      .single()
-    if (!member) throw new Error('Member not found')
-    const { ensureSelfCompetitorForMember } = await import(
-      '@/lib/identity/competitors'
+    competitorId = await getCompetitorIdForMember(supabase, params.accountId)
+    if (!competitorId) {
+      const { data: member } = await supabase
+        .from('members')
+        .select('id, full_name, nickname, country, public_id, is_active')
+        .eq('id', params.accountId)
+        .single()
+      if (!member) throw new Error('Member not found')
+      const { ensureSelfCompetitorForMember } = await import(
+        '@/lib/identity/competitors'
+      )
+      const created = await ensureSelfCompetitorForMember(supabase, member)
+      competitorId = created.competitor.id
+    }
+  } else {
+    await assertManagesCompetitor(
+      supabase,
+      params.accountId,
+      competitorId,
+      'register',
+      { isAdmin: params.isAdmin }
     )
-    const created = await ensureSelfCompetitorForMember(supabase, member)
-    competitorId = created.competitor.id
   }
 
   const registration = await getOrCreateRegistration(supabase, {
@@ -363,8 +380,16 @@ export async function registerSelfForDivision(
     isAdmin: params.isAdmin,
   })
 
-  const updatedEntry =
-    submitted.entries.find((e) => e.division_id === params.divisionId) || entry
+  const submittedEntry =
+    submitted.entries.find((e) => e.division_id === params.divisionId) ?? entry
 
-  return { registration: submitted.registration, entry: updatedEntry }
+  return { registration: submitted.registration, entry: submittedEntry }
+}
+
+/** @deprecated Prefer registerCompetitorForDivision — Prompt 17 */
+export async function registerSelfForDivision(
+  supabase: SupabaseClient,
+  params: { accountId: string; divisionId: string; isAdmin?: boolean }
+): Promise<{ registration: Registration; entry: RegistrationEntry }> {
+  return registerCompetitorForDivision(supabase, params)
 }
