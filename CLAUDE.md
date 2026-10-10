@@ -169,6 +169,9 @@ Applied in order from `supabase/migrations/`:
 13. `019_published_results.sql` — Prompt 12: `results_published_at` + audit; official results from `division_results`
 14. `020_external_media.sql` — Prompt 13: `event_external_media` curated external links
 15. Prompt 14–15 (no migration): `lib/media/embed.ts` + `MediaEmbed` click-to-load players on hub
+16. Prompt 16 (no migration): `/organize` + `lib/organize/access.ts` + capability-gated staff panels
+
+**Planned (17+):** [`docs/PROMPTS_17_PLUS.md`](docs/PROMPTS_17_PLUS.md) — guardians (17), advancement (18), organize lifecycle (19), QR/receipt payments (20), hub (21), **comms & notifications (22)**, hygiene (23).
 
 ---
 
