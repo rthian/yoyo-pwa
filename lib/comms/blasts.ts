@@ -14,7 +14,7 @@ export async function previewBlastRecipients(
     divisionId?: string | null
   }
 ): Promise<{ accountId: string; email: string; registrationId: string }[]> {
-  let query = supabase
+  const query = supabase
     .from('registrations')
     .select(
       `

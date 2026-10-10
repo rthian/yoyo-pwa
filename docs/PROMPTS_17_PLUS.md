@@ -1,6 +1,6 @@
 # Prompts 17+ — Product playbook
 
-**Status:** Prompts **17**–**22** on app (21 hub polish); apply migrations `026`–`027` after deploy. Identity through `025`.  
+**Status:** Prompts **17**–**23** complete. Apply migrations through `027` on greenfield; CI runs `npm test`.  
 **Payments:** Manual QR + receipt verification (**20**); Stripe deferred.
 
 ---
@@ -172,6 +172,8 @@ In-app notification center; PWA push; SMS T-1 opt-in.
 ---
 
 ## Prompt 23 — Platform hygiene
+
+**Shipped:** migrations = schema source of truth (`DEPLOYMENT.md`); RLS doc refresh; `npm test` + GitHub Actions CI; offline `smoke-judge-analytics`.
 
 - Refresh `supabase/schema.sql`; RLS doc or fix.
 - CI smoke on PR; `npm test` entrypoint.
