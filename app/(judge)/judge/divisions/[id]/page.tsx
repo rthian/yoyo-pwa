@@ -75,7 +75,7 @@ export default async function JudgeDivisionPage({ params }: DivisionPageProps) {
     .from('division_members')
     .select(`
       *,
-      competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)
+      competitor:competitors(id, full_name, nickname, country, public_id)
     `)
     .eq('division_id', divisionId)
     .order('play_order', { ascending: true })

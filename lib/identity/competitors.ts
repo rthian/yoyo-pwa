@@ -78,7 +78,6 @@ export async function ensureSelfCompetitorForMember(
   const { data: competitor, error: competitorError } = await supabase
     .from('competitors')
     .insert({
-      source_member_id: member.id,
       public_id: publicId,
       full_name: member.full_name,
       nickname: member.nickname ?? null,
@@ -160,20 +159,11 @@ export async function getManagedCompetitors(
   return out
 }
 
-/**
- * Resolve competitor UUID for a legacy member id (Slice A bridge).
- */
+/** Resolve self-linked competitor UUID for an auth account id. */
 export async function getCompetitorIdForMember(
   supabase: SupabaseClient,
   memberId: string
 ): Promise<string | null> {
-  const { data } = await supabase
-    .from('competitors')
-    .select('id')
-    .eq('source_member_id', memberId)
-    .maybeSingle()
-  if (data?.id) return data.id
-
   const { data: link } = await supabase
     .from('account_competitor_links')
     .select('competitor_id')
@@ -182,6 +172,37 @@ export async function getCompetitorIdForMember(
     .maybeSingle()
 
   return link?.competitor_id ?? null
+}
+
+/** Self-linked auth account id for a competitor (if any). */
+export async function getSelfAccountIdForCompetitor(
+  supabase: SupabaseClient,
+  competitorId: string
+): Promise<string | null> {
+  const map = await mapSelfAccountIdsForCompetitors(supabase, [competitorId])
+  return map.get(competitorId) ?? null
+}
+
+/** Batch map competitor id → self account id. */
+export async function mapSelfAccountIdsForCompetitors(
+  supabase: SupabaseClient,
+  competitorIds: string[]
+): Promise<Map<string, string>> {
+  const unique = [...new Set(competitorIds.filter(Boolean))]
+  const out = new Map<string, string>()
+  if (!unique.length) return out
+
+  const { data: links, error } = await supabase
+    .from('account_competitor_links')
+    .select('account_id, competitor_id')
+    .in('competitor_id', unique)
+    .eq('relationship', 'self')
+
+  if (error) throw new Error(error.message)
+  for (const row of links ?? []) {
+    out.set(row.competitor_id, row.account_id)
+  }
+  return out
 }
 
 /** All competitor ids an account manages (any relationship). */
@@ -209,25 +230,15 @@ export async function mapCompetitorIdsForMembers(
   const out = new Map<string, string>()
   if (!unique.length) return out
 
-  const { data: bySource } = await supabase
-    .from('competitors')
-    .select('id, source_member_id')
-    .in('source_member_id', unique)
+  const { data: links, error } = await supabase
+    .from('account_competitor_links')
+    .select('account_id, competitor_id')
+    .in('account_id', unique)
+    .eq('relationship', 'self')
 
-  for (const row of bySource ?? []) {
-    if (row.source_member_id) out.set(row.source_member_id, row.id)
-  }
-
-  const missing = unique.filter((id) => !out.has(id))
-  if (missing.length) {
-    const { data: links } = await supabase
-      .from('account_competitor_links')
-      .select('account_id, competitor_id')
-      .in('account_id', missing)
-      .eq('relationship', 'self')
-    for (const row of links ?? []) {
-      out.set(row.account_id, row.competitor_id)
-    }
+  if (error) throw new Error(error.message)
+  for (const row of links ?? []) {
+    out.set(row.account_id, row.competitor_id)
   }
 
   return out

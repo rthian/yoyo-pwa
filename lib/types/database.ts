@@ -138,7 +138,6 @@ export interface Member {
 /** Persistent competition identity (Slice A). Not an Auth UID. */
 export interface Competitor {
   id: string
-  source_member_id?: string | null
   public_id: string | null
   full_name: string
   nickname: string | null

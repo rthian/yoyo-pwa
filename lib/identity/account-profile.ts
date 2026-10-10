@@ -29,7 +29,7 @@ export type AccountMemberRow = {
 }
 
 const COMPETITOR_PROFILE_COLUMNS =
-  'id, source_member_id, public_id, full_name, nickname, country, home_geo_id, gender, avatar_url, bio, profile_visibility, first_competed_on, is_active'
+  'id, public_id, full_name, nickname, country, home_geo_id, gender, avatar_url, bio, profile_visibility, first_competed_on, is_active'
 
 /** Overlay self-competitor profile fields onto an account row for API/UI compat. */
 export function composeMember(
@@ -98,7 +98,7 @@ export async function getComposedMember(
   return composeMember(account as AccountMemberRow, competitor)
 }
 
-/** Batch-compose for admin lists. Prefers source_member_id, then self links. */
+/** Batch-compose for admin lists via self account_competitor_links. */
 export async function composeMembersForAccounts(
   supabase: SupabaseClient,
   accounts: AccountMemberRow[]
@@ -108,38 +108,24 @@ export async function composeMembersForAccounts(
   const ids = accounts.map((a) => a.id)
   const byAccount = new Map<string, Competitor>()
 
-  const { data: bySource } = await supabase
-    .from('competitors')
-    .select(COMPETITOR_PROFILE_COLUMNS)
-    .in('source_member_id', ids)
+  const { data: links } = await supabase
+    .from('account_competitor_links')
+    .select('account_id, competitor_id')
+    .in('account_id', ids)
+    .eq('relationship', 'self')
 
-  for (const row of bySource ?? []) {
-    if (row.source_member_id) {
-      byAccount.set(row.source_member_id, row as Competitor)
-    }
-  }
-
-  const missing = ids.filter((id) => !byAccount.has(id))
-  if (missing.length) {
-    const { data: links } = await supabase
-      .from('account_competitor_links')
-      .select('account_id, competitor_id')
-      .in('account_id', missing)
-      .eq('relationship', 'self')
-
-    const competitorIds = [
-      ...new Set((links ?? []).map((l) => l.competitor_id).filter(Boolean)),
-    ]
-    if (competitorIds.length) {
-      const { data: comps } = await supabase
-        .from('competitors')
-        .select(COMPETITOR_PROFILE_COLUMNS)
-        .in('id', competitorIds)
-      const byId = new Map((comps ?? []).map((c) => [c.id, c as Competitor]))
-      for (const link of links ?? []) {
-        const c = byId.get(link.competitor_id)
-        if (c) byAccount.set(link.account_id, c)
-      }
+  const competitorIds = [
+    ...new Set((links ?? []).map((l) => l.competitor_id).filter(Boolean)),
+  ]
+  if (competitorIds.length) {
+    const { data: comps } = await supabase
+      .from('competitors')
+      .select(COMPETITOR_PROFILE_COLUMNS)
+      .in('id', competitorIds)
+    const byId = new Map((comps ?? []).map((c) => [c.id, c as Competitor]))
+    for (const link of links ?? []) {
+      const c = byId.get(link.competitor_id)
+      if (c) byAccount.set(link.account_id, c)
     }
   }
 

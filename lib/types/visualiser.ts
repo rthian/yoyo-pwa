@@ -11,7 +11,6 @@ export interface VisualiserParticipant {
     nickname: string | null
     country?: string | null
     public_id?: string | null
-    source_member_id?: string | null
   } | null
 }
 

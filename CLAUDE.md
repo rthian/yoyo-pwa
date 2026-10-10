@@ -81,7 +81,8 @@ middleware.ts           # Route protection: /admin, /judge, /member require auth
 ### Route Groups & Layouts
 
 Routes are organized in Next.js [route groups](https://nextjs.org/docs/app/building-your-application/routing/route-groups):
-- `(admin)` — admin layout wrapping all admin pages
+- `(admin)` — admin layout wrapping all admin pages (global `members.role === 'admin'` only)
+- `(organizer)` — `/organize` event ops for accounts with `event_staff_roles` (Prompt 16; capability-gated panels)
 - `(judge)` — judge layout (mobile-first, bottom nav)
 - `(member)` — member layout
 
@@ -89,7 +90,7 @@ The root `app/page.tsx` checks the user's role and redirects to the appropriate 
 
 ### Authentication & Authorization
 
-1. **Middleware** (`middleware.ts`): Checks for a Supabase session on protected routes (`/admin`, `/judge`, `/member`). Unauthenticated requests redirect to `/login`.
+1. **Middleware** (`middleware.ts`): Checks for a Supabase session on protected routes (`/admin`, `/judge`, `/member`, `/organize`). Unauthenticated requests redirect to `/login`.
 2. **Role enforcement** happens in individual page components (not middleware) by reading the `member.role` from the database.
 3. **Auth Context** (`lib/auth/context.tsx`): Client-side React context providing `user` and `member` objects.
 4. **Server Actions** (`lib/auth/actions.ts`): `signOut`, `getCurrentUser`, `updatePassword`, etc.
@@ -156,7 +157,8 @@ Applied in order from `supabase/migrations/`:
 5c. Prompt 2 Slice C (no migration): public profile/rankings/search read via `competitors`
 5d. `022_identity_slice_d1_competitor_required.sql` — Slice D1: NOT NULL `competitor_id`, nullable `member_id`, competitor uniques
 5e. `023_identity_slice_d2_drop_member_id.sql` — Slice D2: drop `member_id` on competition tables; competitor-only enrollment
-5f. `024_identity_slice_e_drop_member_profile_cols.sql` — Slice E: drop competition profile columns from `members`
+5f. `024_identity_slice_e_drop_member_profile_cols.sql` — Slice E: drop competition profile cols from `members`
+5g. `025_drop_competitors_source_member_id.sql` — drop `competitors.source_member_id`; links-only account resolution
 6. `012_event_staff_roles.sql` — Prompt 3: `event_staff_roles` + audit + capability helpers; APIs use `lib/auth/event-permissions.ts`
 7. `013_event_timing.sql` — Prompt 4: TIMESTAMPTZ windows, venue/address, keeps `event_date`
 8. `014_registrations.sql` — Prompt 5: registrations + entries + audit; sync confirmed → division_members; capacity/waitlist

@@ -48,7 +48,7 @@
 - App: `composeMember` / `getComposedMember` overlays self-competitor profile onto account row for `/api/member/me` and admin UI.
 - Writes: signup/register/profile/admin update competition fields on `competitors` only; `members` keeps `full_name` as staff display name.
 - Migration drops `public_id`, `nickname`, `country`, `home_geo_id`, `gender`, `avatar_url`, `bio`, `profile_visibility`, `first_competed_on` from `members`; drops `public_members`.
-- `competitors.source_member_id` retained (optional later cleanup).
+- `competitors.source_member_id` dropped in migration `025` (account resolution via `account_competitor_links` only).
 
 ## Slice C notes (no migration)
 

@@ -23,7 +23,7 @@ import type { Competitor, DivisionMember, DivisionMemberStatus } from '@/lib/typ
 
 type CompetitorEmbed = Pick<
   Competitor,
-  'id' | 'full_name' | 'nickname' | 'country' | 'public_id' | 'source_member_id'
+  'id' | 'full_name' | 'nickname' | 'country' | 'public_id'
 >
 
 interface ParticipantWithCompetitor extends DivisionMember {
@@ -36,6 +36,10 @@ interface SortableParticipantRowProps {
   statusOptions: { value: DivisionMemberStatus; label: string }[]
   onStatusChange: (participantId: string, status: DivisionMemberStatus) => void
   onRemove: (participantId: string) => void
+  readOnly?: boolean
+  allowReorder?: boolean
+  allowStatus?: boolean
+  allowRemove?: boolean
 }
 
 export default function SortableParticipantRow({
@@ -44,7 +48,14 @@ export default function SortableParticipantRow({
   statusOptions,
   onStatusChange,
   onRemove,
+  readOnly = false,
+  allowReorder = true,
+  allowStatus = true,
+  allowRemove = true,
 }: SortableParticipantRowProps) {
+  const drag = !readOnly && allowReorder
+  const status = !readOnly && allowStatus
+  const remove = !readOnly && allowRemove
   const {
     attributes,
     listeners,
@@ -65,8 +76,8 @@ export default function SortableParticipantRow({
       style={style}
       className={isDragging ? 'opacity-50 bg-muted/50' : ''}
     >
-      <TableCell className="w-10 cursor-grab active:cursor-grabbing" {...attributes} {...listeners}>
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      <TableCell className={drag ? "w-10 cursor-grab active:cursor-grabbing" : "w-10"} {...(drag ? { ...attributes, ...listeners } : {})}>
+        {drag && <GripVertical className="h-4 w-4 text-muted-foreground" />}
       </TableCell>
       <TableCell className="font-medium tabular-nums w-12">{index + 1}</TableCell>
       <TableCell>{participant.competitor.full_name}</TableCell>
@@ -74,6 +85,9 @@ export default function SortableParticipantRow({
         {participant.competitor.country ?? '—'}
       </TableCell>
       <TableCell>
+        {!status ? (
+          <span className="text-sm capitalize">{participant.status.replace(/_/g, ' ')}</span>
+        ) : (
         <Select
           value={participant.status}
           onValueChange={(value) =>
@@ -91,16 +105,19 @@ export default function SortableParticipantRow({
             ))}
           </SelectContent>
         </Select>
+        )}
       </TableCell>
       <TableCell className="text-right w-12">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onRemove(participant.id)}
-          aria-label="Remove participant"
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
+        {remove && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onRemove(participant.id)}
+            aria-label="Remove participant"
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        )}
       </TableCell>
     </TableRow>
   )

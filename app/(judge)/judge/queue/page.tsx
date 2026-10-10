@@ -83,7 +83,7 @@ export default async function JudgeQueuePage() {
         id,
         division_id,
         play_order,
-        competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)
+        competitor:competitors(id, full_name, nickname, country, public_id)
       `)
       .in('division_id', divisionIds)
       .order('play_order', { ascending: true })

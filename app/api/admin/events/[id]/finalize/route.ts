@@ -71,7 +71,7 @@ async function gatherFinalizeSoftFacts(
     const { data: participants } = await supabaseAdmin
       .from('division_members')
       .select(
-        'id, competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)'
+        'id, competitor:competitors(id, full_name, nickname, country, public_id)'
       )
       .eq('division_id', div.id)
 

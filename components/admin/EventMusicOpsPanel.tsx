@@ -3,6 +3,8 @@
  */
 'use client'
 
+import type { EventOpsPanelProps } from '@/components/admin/event-ops-props'
+
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -26,7 +28,7 @@ import { Download, HardDrive, Loader2, RefreshCw, Siren } from 'lucide-react'
 import { toast } from 'sonner'
 import { preflightCacheApproved } from '@/lib/music/offline-cache'
 
-interface EventMusicOpsPanelProps {
+interface EventMusicOpsPanelProps extends EventOpsPanelProps {
   eventId: string
 }
 
@@ -64,7 +66,7 @@ const STATUS_FILTERS = [
   'locked',
 ] as const
 
-export default function EventMusicOpsPanel({ eventId }: EventMusicOpsPanelProps) {
+export default function EventMusicOpsPanel({ eventId, readOnly = false }: EventMusicOpsPanelProps) {
   const [stages, setStages] = useState<StageBlock[]>([])
   const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number]>('all')
   const [divisionId, setDivisionId] = useState<string>('all')
@@ -248,6 +250,7 @@ export default function EventMusicOpsPanel({ eventId }: EventMusicOpsPanelProps)
               Manifest CSV
             </a>
           </Button>
+          {!readOnly && (
           <Button size="sm" onClick={runPreflight} disabled={preflighting}>
             {preflighting ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -256,6 +259,7 @@ export default function EventMusicOpsPanel({ eventId }: EventMusicOpsPanelProps)
             )}
             Offline preflight
           </Button>
+          )}
         </div>
       </div>
 
@@ -318,7 +322,7 @@ export default function EventMusicOpsPanel({ eventId }: EventMusicOpsPanelProps)
                   )}
                 </TableCell>
                 <TableCell>
-                  {r.submissionId && (
+                  {!readOnly && r.submissionId && (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -334,7 +338,7 @@ export default function EventMusicOpsPanel({ eventId }: EventMusicOpsPanelProps)
         </Table>
       )}
 
-      {emergencyId && (
+      {!readOnly && emergencyId && (
         <div className="rounded-lg border p-4 space-y-3">
           <h3 className="font-medium">Emergency replacement</h3>
           <p className="text-sm text-muted-foreground">

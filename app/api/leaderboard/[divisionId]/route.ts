@@ -98,7 +98,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       .select(`
         id,
         play_order,
-        competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)
+        competitor:competitors(id, full_name, nickname, country, public_id)
       `)
       .eq('division_id', divisionId)
       .order('play_order', { ascending: true })
@@ -142,7 +142,6 @@ export async function GET(request: Request, { params }: RouteParams) {
       nickname: string | null
       country: string | null
       public_id: string | null
-      source_member_id: string | null
     } | null
     const leaderboard = participants.map(participant => {
       const raw = participant.competitor as unknown as
