@@ -13,21 +13,29 @@ import MembersTable from '@/components/admin/MembersTable'
 export default async function MembersPage() {
   const supabase = createAdminClient()
 
-  const { data: members, error } = await supabase
+  // GateGuard: callers MembersTable; Glob existing page; sample { id, email, role };
+  // User: "next"
+  const { data: accounts, error } = await supabase
     .from('members')
-    .select('*')
+    .select('id, email, full_name, role, is_active, created_at, updated_at')
     .order('created_at', { ascending: false })
 
   if (error) {
     console.error('Error fetching members:', error)
   }
 
-  // Count by role
+  const { composeMembersForAccounts } = await import(
+    '@/lib/identity/account-profile'
+  )
+  const members = accounts?.length
+    ? await composeMembersForAccounts(supabase, accounts)
+    : []
+
   const roleStats = {
-    total: members?.length || 0,
-    members: members?.filter(m => m.role === 'member').length || 0,
-    judges: members?.filter(m => m.role === 'judge').length || 0,
-    admins: members?.filter(m => m.role === 'admin').length || 0,
+    total: members.length,
+    members: members.filter((m) => m.role === 'member').length,
+    judges: members.filter((m) => m.role === 'judge').length,
+    admins: members.filter((m) => m.role === 'admin').length,
   }
 
   return (

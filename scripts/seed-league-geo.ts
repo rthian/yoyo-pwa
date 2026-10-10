@@ -115,8 +115,9 @@ async function main() {
     if (error) console.error(s.code, error.message)
   }
 
-  const { data: members } = await supabase
-    .from('members')
+  // Slice E: home_geo on competitors. Callers: seed CLI. Glob existing. User: "next"
+  const { data: competitors } = await supabase
+    .from('competitors')
     .select('id, country, home_geo_id')
     .is('home_geo_id', null)
     .not('country', 'is', null)
@@ -126,21 +127,21 @@ async function main() {
   )
 
   let updated = 0
-  for (const m of members ?? []) {
+  for (const c of competitors ?? []) {
     const iso =
-      nameToIso[(m.country ?? '').toLowerCase().trim()] ||
-      ((m.country ?? '').length === 2 ? (m.country ?? '').toUpperCase() : null)
+      nameToIso[(c.country ?? '').toLowerCase().trim()] ||
+      ((c.country ?? '').length === 2 ? (c.country ?? '').toUpperCase() : null)
     if (!iso) continue
     const node = countryByIso.get(iso)
     if (!node) continue
     const { error } = await supabase
-      .from('members')
+      .from('competitors')
       .update({ home_geo_id: node.id })
-      .eq('id', m.id)
+      .eq('id', c.id)
     if (!error) updated++
   }
 
-  console.log(`Seeded countries/states. Backfilled home_geo_id on ${updated} members.`)
+  console.log(`Seeded countries/states. Backfilled home_geo_id on ${updated} competitors.`)
 }
 
 main().catch((e) => {

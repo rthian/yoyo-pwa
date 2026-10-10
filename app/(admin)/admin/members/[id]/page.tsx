@@ -19,13 +19,11 @@ export default async function MemberDetailPage({ params }: MemberDetailPageProps
   const { createAdminClient } = await import('@/lib/supabase/admin')
   const supabase = createAdminClient()
 
-  const { data: member, error } = await supabase
-    .from('members')
-    .select('*')
-    .eq('id', id)
-    .single()
+  // GateGuard: callers detail UI; Glob existing page; sample composed Member; User: "next"
+  const { getComposedMember } = await import('@/lib/identity/account-profile')
+  const member = await getComposedMember(supabase, id)
 
-  if (error || !member) {
+  if (!member) {
     notFound()
   }
 

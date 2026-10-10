@@ -1,8 +1,7 @@
 /**
- * Regenerate all member League IDs to opaque 8-char Crockford codes (no brand/year/name).
+ * Regenerate League IDs on competitors (Slice E).
  * Run: npx tsx --env-file=.env.local scripts/regenerate-league-ids.ts
- * Callers: manual CLI. Glob: scripts/regenerate-league-ids.ts exists (overwrite).
- * Writes members.public_id e.g. ZX905JYC. User: no brand; scale 10000+ internationally
+ * GateGuard: callers manual CLI; Glob existing script; sample public_id ZX905JYC; User: "next"
  */
 import { createClient } from '@supabase/supabase-js'
 import { formatLeagueId, generateLeagueId } from '../lib/rankings/league-id'
@@ -16,39 +15,38 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
-  const { data: members, error } = await sb
-    .from('members')
+  const { data: competitors, error } = await sb
+    .from('competitors')
     .select('id, public_id, full_name')
   if (error) throw new Error(error.message)
-  if (!members?.length) {
-    console.log('No members')
+  if (!competitors?.length) {
+    console.log('No competitors')
     return
   }
 
   const used = new Set<string>()
   let updated = 0
 
-  for (const m of members) {
+  for (const c of competitors) {
     let id = generateLeagueId()
     let guard = 0
     while (used.has(id) && guard++ < 40) id = generateLeagueId()
     used.add(id)
 
     const { error: upErr } = await sb
-      .from('members')
+      .from('competitors')
       .update({ public_id: id })
-      .eq('id', m.id)
+      .eq('id', c.id)
 
     if (upErr) {
-      console.error(m.full_name, upErr.message)
+      console.error(c.full_name, upErr.message)
       continue
     }
     updated++
-    console.log(`${m.full_name}: ${m.public_id ?? '(none)'} → ${formatLeagueId(id)}`)
+    console.log(`${c.full_name}: ${c.public_id ?? '(none)'} → ${formatLeagueId(id)}`)
   }
 
-  console.log(`\nUpdated ${updated}/${members.length} League IDs (8-char opaque).`)
-  console.log('Capacity: 32^8 ≈ 1.1 trillion codes — fine for 10k–1M+ players.')
+  console.log(`\nUpdated ${updated}/${competitors.length} League IDs on competitors.`)
 }
 
 main().catch((e) => {

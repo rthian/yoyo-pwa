@@ -63,9 +63,10 @@ export async function GET(
       })
       .filter((id): id is string => Boolean(id))
 
+    // Slice E: account list + composed profile for picker. User: "next"
     const query = auth.supabaseAdmin
       .from('members')
-      .select('*')
+      .select('id, email, full_name, role, is_active, created_at, updated_at')
       .eq('is_active', true)
       .eq('role', 'member')
       .order('full_name', { ascending: true })
@@ -74,11 +75,17 @@ export async function GET(
       query.not('id', 'in', `(${enrolledAccountIds.join(',')})`)
     }
 
-    const { data: availableMembers } = await query
+    const { data: accounts } = await query
+    const { composeMembersForAccounts } = await import(
+      '@/lib/identity/account-profile'
+    )
+    const availableMembers = accounts?.length
+      ? await composeMembersForAccounts(auth.supabaseAdmin, accounts)
+      : []
 
     return NextResponse.json({
       participants: participants || [],
-      availableMembers: availableMembers || [],
+      availableMembers,
     })
   } catch (error) {
     console.error('Error fetching participants:', error)
@@ -114,9 +121,8 @@ export async function POST(
     if (!competitorId) {
       const { data: memberRow } = await auth.supabaseAdmin
         .from('members')
-        .select(
-          'id, full_name, nickname, country, home_geo_id, gender, avatar_url, bio, profile_visibility, first_competed_on, public_id, is_active'
-        )
+        // GateGuard: callers DivisionParticipants add; Glob existing; User: "next"
+        .select('id, full_name, is_active')
         .eq('id', body.member_id)
         .single()
       if (!memberRow) {

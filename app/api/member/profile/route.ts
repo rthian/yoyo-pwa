@@ -1,9 +1,15 @@
 /**
  * Member Profile API Route
- * Handles fetching and updating the current user's profile
+ * Slice E: competition profile on competitors; full_name also on members.
+ * Callers: member profile page. Glob: existing. Sample patch: { full_name, country }.
+ * User: "next"
  */
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import {
+  getComposedMember,
+  updateAccountAndSelfProfile,
+} from '@/lib/identity/account-profile'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
@@ -15,57 +21,42 @@ const profileUpdateSchema = z.object({
   home_geo_id: z.string().uuid().optional().nullable(),
 })
 
-// Get current user's profile
 export async function GET() {
   try {
     const supabase = await createClient()
     const supabaseAdmin = createAdminClient()
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: member, error } = await supabaseAdmin
-      .from('members')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      )
+    const member = await getComposedMember(supabaseAdmin, user.id)
+    if (!member) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 })
     }
 
     return NextResponse.json({ member })
   } catch (error) {
     console.error('Profile fetch error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-// Update current user's profile
 export async function PATCH(request: Request) {
   try {
     const supabase = await createClient()
     const supabaseAdmin = createAdminClient()
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -78,37 +69,20 @@ export async function PATCH(request: Request) {
       )
     }
 
-    const { data: member, error } = await supabaseAdmin
-      .from('members')
-      .update(validationResult.data)
-      .eq('id', user.id)
-      .select()
-      .single()
-
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      )
-    }
-
-    // Slice C: keep self competitor display fields in sync for public profiles
-    await supabaseAdmin
-      .from('competitors')
-      .update({
-        full_name: validationResult.data.full_name,
-        nickname: validationResult.data.nickname ?? null,
-        country: validationResult.data.country ?? null,
-        gender: validationResult.data.gender ?? 'undisclosed',
-        home_geo_id: validationResult.data.home_geo_id ?? null,
-      })
-      .eq('source_member_id', user.id)
+    const member = await updateAccountAndSelfProfile(
+      supabaseAdmin,
+      user.id,
+      validationResult.data
+    )
 
     return NextResponse.json({ member })
   } catch (error) {
     console.error('Profile update error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error:
+          error instanceof Error ? error.message : 'Internal server error',
+      },
       { status: 500 }
     )
   }

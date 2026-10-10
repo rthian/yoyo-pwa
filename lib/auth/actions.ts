@@ -15,32 +15,32 @@ export async function signOut() {
   redirect('/login')
 }
 
+// GateGuard: callers server pages; Glob existing actions.ts;
+// Sample: { id, email, full_name, public_id }. User: "next"
 export async function getCurrentUser() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   if (!user) return null
 
-  const { data: member } = await supabase
-    .from('members')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  return member
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const { getComposedMember } = await import('@/lib/identity/account-profile')
+  return getComposedMember(createAdminClient(), user.id)
 }
 
 export async function getCurrentUserWithAuth() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   if (!user) return { user: null, member: null }
 
-  const { data: member } = await supabase
-    .from('members')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const { getComposedMember } = await import('@/lib/identity/account-profile')
+  const member = await getComposedMember(createAdminClient(), user.id)
 
   return { user, member }
 }
