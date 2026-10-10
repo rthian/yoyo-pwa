@@ -13,6 +13,8 @@ import {
   getRegistrationAvailability,
 } from '@/lib/events/timing'
 import { getCompetitorIdsForAccount } from '@/lib/identity/competitors'
+import { formatFeeCents } from '@/lib/payments/receipts'
+import { buildPrepChecklistForRegistration } from '@/lib/prep/checklist'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -36,7 +38,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
          check_in_opens_at, check_in_closes_at,
          venue_name, address_line1, address_line2, city, region, postal_code, country_code,
          website_url, organizer_contact_name, organizer_contact_email, organizer_contact_public,
-         results_published_at`
+         results_published_at,
+         payment_required, registration_fee_cents, registration_fee_currency,
+         payment_instructions, payment_qr_url`
       )
       .eq('id', eventId)
       .single()
@@ -89,10 +93,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
       user && divisionIds.length && myCompetitorIds.length
         ? admin
             .from('division_members')
-            .select('division_id')
+            .select('division_id, competitor_id')
             .in('competitor_id', myCompetitorIds)
             .in('division_id', divisionIds)
-        : Promise.resolve({ data: [] as { division_id: string }[] }),
+        : Promise.resolve({
+            data: [] as { division_id: string; competitor_id: string }[],
+          }),
       admin
         .from('schedule_entries')
         .select('*')
@@ -138,11 +144,18 @@ export async function GET(_request: Request, { params }: RouteParams) {
       countMap.set(row.division_id, (countMap.get(row.division_id) || 0) + 1)
     }
 
-    const registered = new Set((registrations ?? []).map((r) => r.division_id))
+    const registeredByDivision = new Map<string, string[]>()
+    for (const r of registrations ?? []) {
+      const row = r as { division_id: string; competitor_id: string }
+      const list = registeredByDivision.get(row.division_id) ?? []
+      list.push(row.competitor_id)
+      registeredByDivision.set(row.division_id, list)
+    }
 
     const enrichedDivisions = (divisions ?? []).map((d) => ({
       ...d,
-      is_registered: registered.has(d.id),
+      is_registered: (registeredByDivision.get(d.id)?.length ?? 0) > 0,
+      registered_competitor_ids: registeredByDivision.get(d.id) || [],
       participant_count: countMap.get(d.id) || 0,
     }))
 
@@ -207,6 +220,58 @@ export async function GET(_request: Request, { params }: RouteParams) {
         scoringLocked: Boolean(d.scoring_locked),
       }))
 
+
+    const feeLabel = event.payment_required
+      ? formatFeeCents(
+          event.registration_fee_cents as number | null,
+          (event.registration_fee_currency as string) || 'SGD'
+        )
+      : null
+
+    let prepChecklists: Array<{
+      registrationId: string
+      competitorId: string
+      competitorName: string | null
+      paymentStatus: string
+      items: Awaited<ReturnType<typeof buildPrepChecklistForRegistration>>
+    }> = []
+
+    if (user && myCompetitorIds.length) {
+      const { data: regs } = await admin
+        .from('registrations')
+        .select('id, competitor_id, payment_status, status')
+        .eq('event_id', eventId)
+        .in('competitor_id', myCompetitorIds)
+        .not('status', 'eq', 'cancelled')
+
+      const competitorIds = (regs ?? []).map((r) => r.competitor_id as string)
+      const nameById = new Map<string, string>()
+      if (competitorIds.length) {
+        const { data: comps } = await admin
+          .from('competitors')
+          .select('id, full_name')
+          .in('id', competitorIds)
+        for (const c of comps ?? []) {
+          nameById.set(c.id as string, c.full_name as string)
+        }
+      }
+
+      for (const reg of regs ?? []) {
+        const items = await buildPrepChecklistForRegistration(admin, {
+          registrationId: reg.id as string,
+          paymentStatus: reg.payment_status as string,
+          venueName: event.venue_name as string | null,
+        })
+        prepChecklists.push({
+          registrationId: reg.id as string,
+          competitorId: reg.competitor_id as string,
+          competitorName: nameById.get(reg.competitor_id as string) ?? null,
+          paymentStatus: reg.payment_status as string,
+          items,
+        })
+      }
+    }
+
     return NextResponse.json({
       event: {
         ...event,
@@ -234,6 +299,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
       resultsPublished: Boolean(event.results_published_at),
       resultsPublishedAt: event.results_published_at ?? null,
       media,
+      feeLabel,
+      prepChecklists,
     })
   } catch (error) {
     console.error('Event hub error:', error)

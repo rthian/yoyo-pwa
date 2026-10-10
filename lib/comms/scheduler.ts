@@ -9,6 +9,11 @@ import {
   renderCommsTemplate,
 } from '@/lib/comms/templates'
 import { formatFeeCents } from '@/lib/payments/receipts'
+import {
+  buildPrepChecklist,
+  musicApprovedForRegistration,
+  prepChecklistLines,
+} from '@/lib/prep/checklist'
 
 function daysUntil(iso: string | null | undefined, now = new Date()): number | null {
   if (!iso) return null
@@ -24,34 +29,6 @@ async function managers(supabase: SupabaseClient, competitorId: string) {
     .eq('competitor_id', competitorId)
     .eq('can_register', true)
   return (data ?? []).map((r) => r.account_id as string)
-}
-
-async function musicApproved(
-  supabase: SupabaseClient,
-  registrationId: string
-): Promise<boolean | null> {
-  const { data: entries } = await supabase
-    .from('registration_entries')
-    .select('division_id')
-    .eq('registration_id', registrationId)
-  const divisionIds = (entries ?? []).map((e) => e.division_id)
-  if (!divisionIds.length) return null
-
-  const { data: regs } = await supabase
-    .from('registrations')
-    .select('competitor_id')
-    .eq('id', registrationId)
-    .maybeSingle()
-  if (!regs?.competitor_id) return null
-
-  const { data: music } = await supabase
-    .from('music_submissions')
-    .select('id, status')
-    .eq('competitor_id', regs.competitor_id)
-    .in('division_id', divisionIds)
-
-  if (!music?.length) return false
-  return music.every((m) => m.status === 'approved')
 }
 
 export async function schedulePaymentReminders(
@@ -180,18 +157,17 @@ export async function scheduleEventCountdowns(
       .in('status', ['confirmed', 'pending', 'waitlisted', 'checked_in'])
 
     for (const reg of regs ?? []) {
-      const musicOk = await musicApproved(supabase, reg.id as string)
-      const checklist = [
-        `Payment: ${reg.payment_status}`,
-        musicOk == null
-          ? 'Music: n/a'
-          : musicOk
-            ? 'Music: approved'
-            : 'Music: still needed',
-        event.venue_name
-          ? `Venue: ${event.venue_name}`
-          : 'Venue: see event hub',
-      ]
+      const musicOk = await musicApprovedForRegistration(
+        supabase,
+        reg.id as string
+      )
+      const checklist = prepChecklistLines(
+        buildPrepChecklist({
+          paymentStatus: reg.payment_status as string,
+          musicOk,
+          venueName: event.venue_name as string | null,
+        })
+      )
 
       const { data: competitor } = await supabase
         .from('competitors')

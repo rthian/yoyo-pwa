@@ -28,6 +28,10 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import MediaEmbed from '@/components/media/MediaEmbed'
+import CompetitorSelector, {
+  type SelectableCompetitor,
+} from '@/components/member/CompetitorSelector'
+import EventPrepChecklist from '@/components/member/EventPrepChecklist'
 
 type TabId = 'register' | 'schedule' | 'boards' | 'results' | 'media'
 
@@ -42,6 +46,7 @@ interface HubDivision {
   venue: string | null
   scoring_locked: boolean
   is_registered: boolean
+  registered_competitor_ids?: string[]
   participant_count: number
   capacity?: number | null
 }
@@ -106,6 +111,19 @@ interface HubPayload {
     kind: string
     provider: string
     description: string | null
+  }>
+  feeLabel?: string | null
+  prepChecklists?: Array<{
+    registrationId: string
+    competitorId: string
+    competitorName: string | null
+    paymentStatus: string
+    items: Array<{
+      key: 'payment' | 'music' | 'venue'
+      label: string
+      detail: string
+      ok: boolean | null
+    }>
   }>
 }
 
@@ -194,6 +212,8 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
   const [registeringId, setRegisteringId] = useState<string | null>(null)
   const [officialResults, setOfficialResults] = useState<OfficialResults | null>(null)
   const [resultsLoading, setResultsLoading] = useState(false)
+  const [competitors, setCompetitors] = useState<SelectableCompetitor[]>([])
+  const [selectedCompetitorId, setSelectedCompetitorId] = useState('')
 
   const load = useCallback(async (opts?: { soft?: boolean }) => {
     try {
@@ -217,6 +237,23 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    if (!data?.authenticated) return
+    void (async () => {
+      const res = await fetch('/api/member/competitors')
+      if (!res.ok) return
+      const json = await res.json()
+      const list = (json.competitors || []) as SelectableCompetitor[]
+      setCompetitors(list)
+      setSelectedCompetitorId((prev) => {
+        if (prev && list.some((c) => c.id === prev)) return prev
+        const self = list.find((c) => c.link.relationship === 'self')
+        const reg = list.find((c) => c.link.can_register) || self || list[0]
+        return reg?.id || ''
+      })
+    })()
+  }, [data?.authenticated])
 
   useEffect(() => {
     setTab(parseTab(searchParams.get('tab')))
@@ -258,9 +295,20 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
     router.replace(qs ? `/events/${eventId}?${qs}` : `/events/${eventId}`, { scroll: false })
   }
 
+  const isRegisteredForSelected = (division: HubDivision) => {
+    if (!selectedCompetitorId) return division.is_registered
+    return (division.registered_competitor_ids || []).includes(
+      selectedCompetitorId
+    )
+  }
+
   const handleRegistration = async (divisionId: string, isRegistered: boolean) => {
     if (!data?.authenticated) {
       router.push(`/login?redirect=${encodeURIComponent(`/events/${eventId}?tab=register`)}`)
+      return
+    }
+    if (!selectedCompetitorId) {
+      toast.error('Select a competitor first')
       return
     }
     setRegisteringId(divisionId)
@@ -270,12 +318,16 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           division_id: divisionId,
+          competitor_id: selectedCompetitorId,
           action: isRegistered ? 'unregister' : 'register',
         }),
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Registration failed')
       toast.success(isRegistered ? 'Unregistered' : 'Registered')
+      if (!isRegistered && data.feeLabel) {
+        toast.message('If payment is required, finish on Registrations')
+      }
       await load({ soft: true })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Registration failed')
@@ -376,7 +428,8 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
               </div>
               {(event.registration_opens_at_local ||
                 event.registration_closes_at_local ||
-                event.music_deadline_at_local) && (
+                event.music_deadline_at_local ||
+                data.feeLabel) && (
                 <div className="text-xs text-muted-foreground mt-2 space-y-0.5">
                   {event.registration_opens_at_local && (
                     <p>Reg opens: {event.registration_opens_at_local}</p>
@@ -386,6 +439,17 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
                   )}
                   {event.music_deadline_at_local && (
                     <p>Music deadline: {event.music_deadline_at_local}</p>
+                  )}
+                  {data.feeLabel && (
+                    <p>
+                      Fee: {data.feeLabel} ·{' '}
+                      <Link
+                        href="/member/registrations"
+                        className="underline text-primary"
+                      >
+                        Pay / upload receipt
+                      </Link>
+                    </p>
                   )}
                 </div>
               )}
@@ -449,6 +513,36 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
               </Card>
             )}
 
+            {authenticated && competitors.length > 0 && (
+              <CompetitorSelector
+                competitors={competitors}
+                value={selectedCompetitorId}
+                onChange={setSelectedCompetitorId}
+                capability="register"
+                label="Registering as"
+              />
+            )}
+
+            {authenticated &&
+              (data.prepChecklists || []).map((pc) => (
+                <EventPrepChecklist
+                  key={pc.registrationId}
+                  title={`Prep — ${pc.competitorName || 'Competitor'}`}
+                  items={pc.items}
+                />
+              ))}
+
+            {authenticated && (
+              <div className="flex flex-wrap gap-2 text-sm">
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/member/registrations">My registrations / pay</Link>
+                </Button>
+                <Button asChild size="sm" variant="ghost">
+                  <Link href="/member/music">Upload music</Link>
+                </Button>
+              </div>
+            )}
+
             {divisions.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
@@ -496,7 +590,7 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
                         </div>
                       </div>
                       <div className="shrink-0">
-                        {division.is_registered && registrationOpen ? (
+                        {isRegisteredForSelected(division) && registrationOpen ? (
                           <Button
                             variant="outline"
                             size="sm"
@@ -513,7 +607,7 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
                               </>
                             )}
                           </Button>
-                        ) : division.is_registered ? (
+                        ) : isRegisteredForSelected(division) ? (
                           <Badge className="bg-green-100 text-green-800">Registered</Badge>
                         ) : registrationOpen ? (
                           <Button

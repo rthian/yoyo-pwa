@@ -6,6 +6,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { getCompetitorIdsForAccount } from '@/lib/identity/competitors'
+import { getRegistrationAvailability, formatInTimeZone } from '@/lib/events/timing'
+import { formatFeeCents } from '@/lib/payments/receipts'
 
 export async function GET() {
   try {
@@ -28,6 +30,16 @@ export async function GET() {
         event_date,
         location,
         status,
+        starts_at,
+        timezone,
+        registration_opens_at,
+        registration_closes_at,
+        music_deadline_at,
+        venue_name,
+        payment_required,
+        registration_fee_cents,
+        registration_fee_currency,
+        payment_instructions,
         divisions(
           id,
           name,
@@ -80,28 +92,51 @@ export async function GET() {
 
     // Registration is open for published and active events
     // Enrich events with registration status and participant counts
-    const enrichedEvents = (events || []).map(event => ({
-      ...event,
-      registration_open: ['published', 'active'].includes(event.status),
-      divisions: ((event.divisions || []) as Array<{
-        id: string
-        name: string
-        description: string | null
-        scoring_type: string
-        round_type: string | null
-        scheduled_start: string | null
-        scheduled_end: string | null
-        venue: string | null
-        sort_order: number
-      }>)
-        .sort((a, b) => a.sort_order - b.sort_order)
-        .map(d => ({
-          ...d,
-          is_registered: (registeredByDivision.get(d.id)?.length ?? 0) > 0,
-          registered_competitor_ids: registeredByDivision.get(d.id) || [],
-          participant_count: countMap.get(d.id) || 0,
-        })),
-    }))
+    const enrichedEvents = (events || []).map((event) => {
+      const reg = getRegistrationAvailability(event)
+      const tz = event.timezone || 'UTC'
+      const feeLabel = event.payment_required
+        ? formatFeeCents(
+            event.registration_fee_cents as number | null,
+            (event.registration_fee_currency as string) || 'SGD'
+          )
+        : null
+      return {
+        ...event,
+        registration_open: reg.open,
+        registration_reason: reg.reason,
+        fee_label: feeLabel,
+        registration_opens_at_local: event.registration_opens_at
+          ? formatInTimeZone(event.registration_opens_at as string, tz)
+          : null,
+        registration_closes_at_local: event.registration_closes_at
+          ? formatInTimeZone(event.registration_closes_at as string, tz)
+          : null,
+        music_deadline_at_local: event.music_deadline_at
+          ? formatInTimeZone(event.music_deadline_at as string, tz)
+          : null,
+        divisions: (
+          (event.divisions || []) as Array<{
+            id: string
+            name: string
+            description: string | null
+            scoring_type: string
+            round_type: string | null
+            scheduled_start: string | null
+            scheduled_end: string | null
+            venue: string | null
+            sort_order: number
+          }>
+        )
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map((d) => ({
+            ...d,
+            is_registered: (registeredByDivision.get(d.id)?.length ?? 0) > 0,
+            registered_competitor_ids: registeredByDivision.get(d.id) || [],
+            participant_count: countMap.get(d.id) || 0,
+          })),
+      }
+    })
 
     return NextResponse.json({ events: enrichedEvents })
   } catch (error) {

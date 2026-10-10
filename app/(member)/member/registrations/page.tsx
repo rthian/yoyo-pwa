@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getManagedCompetitors } from '@/lib/identity/competitors'
 import PaymentReceiptPanel from '@/components/member/PaymentReceiptPanel'
+import EventPrepChecklist from '@/components/member/EventPrepChecklist'
+import { buildPrepChecklistForRegistration } from '@/lib/prep/checklist'
 
 export default async function MemberRegistrationsPage() {
   const supabase = await createClient()
@@ -37,7 +39,7 @@ export default async function MemberRegistrationsPage() {
           event:events(
             id, name, event_date, starts_at, status, timezone,
             payment_required, registration_fee_cents, registration_fee_currency,
-            payment_instructions, payment_qr_url, payment_qr_payload
+            payment_instructions, payment_qr_url, payment_qr_payload, venue_name
           ),
           competitor:competitors(id, full_name, public_id),
           entries:registration_entries(
@@ -50,6 +52,23 @@ export default async function MemberRegistrationsPage() {
         .order('created_at', { ascending: false })
     : { data: [] }
 
+  const rows = await Promise.all(
+    (registrations ?? []).map(async (reg) => {
+      const event = reg.event as unknown as {
+        id: string
+        name: string
+        venue_name?: string | null
+        payment_required?: boolean
+      } | null
+      const items = await buildPrepChecklistForRegistration(admin, {
+        registrationId: reg.id,
+        paymentStatus: reg.payment_status,
+        venueName: event?.venue_name ?? null,
+      })
+      return { reg, items }
+    })
+  )
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl space-y-6">
       <div>
@@ -60,7 +79,7 @@ export default async function MemberRegistrationsPage() {
         </p>
       </div>
 
-      {!registrations?.length ? (
+      {!rows.length ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             No registrations yet.{' '}
@@ -71,15 +90,17 @@ export default async function MemberRegistrationsPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {registrations.map((reg) => {
+          {rows.map(({ reg, items }) => {
             const event = reg.event as unknown as {
               id: string
               name: string
               status: string
               event_date: string | null
               payment_required?: boolean
+              venue_name?: string | null
             } | null
             const competitor = reg.competitor as unknown as {
+              id: string
               full_name: string
               public_id: string | null
             } | null
@@ -127,9 +148,34 @@ export default async function MemberRegistrationsPage() {
                     Eligibility: {reg.eligibility_status} · Payment:{' '}
                     {reg.payment_status} · Waiver: {reg.waiver_status}
                   </div>
+                  <EventPrepChecklist items={items} />
                   {(event?.payment_required ||
                     reg.payment_status !== 'not_required') && (
                     <PaymentReceiptPanel registrationId={reg.id} />
+                  )}
+                  {reg.entries && (
+                    <div className="flex flex-wrap gap-2">
+                      {(
+                        reg.entries as unknown as Array<{
+                          division: { id: string; name: string } | null
+                        }>
+                      ).map((e, i) =>
+                        e.division ? (
+                          <Button
+                            key={`${e.division.id}-${i}`}
+                            asChild
+                            size="sm"
+                            variant="ghost"
+                          >
+                            <Link
+                              href={`/member/music?divisionId=${e.division.id}&competitorId=${competitor?.id || ''}`}
+                            >
+                              Music: {e.division.name}
+                            </Link>
+                          </Button>
+                        ) : null
+                      )}
+                    </div>
                   )}
                   {event?.id && (
                     <Button asChild size="sm" variant="outline">

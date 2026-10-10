@@ -34,6 +34,12 @@ interface BrowseEvent {
   location: string | null
   status: string
   registration_open: boolean
+  fee_label?: string | null
+  payment_required?: boolean
+  registration_opens_at_local?: string | null
+  registration_closes_at_local?: string | null
+  music_deadline_at_local?: string | null
+  venue_name?: string | null
   divisions: Array<{
     id: string
     name: string
@@ -127,6 +133,14 @@ export default function MemberEventsPage() {
       toast.success(
         isRegistered ? 'Unregistered successfully' : 'Registered successfully!'
       )
+      if (!isRegistered) {
+        const ev = events.find((e) =>
+          e.divisions.some((d) => d.id === divisionId)
+        )
+        if (ev?.payment_required) {
+          toast.message('Payment may be required — open Registrations to pay')
+        }
+      }
       await fetchEvents()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Registration failed')
@@ -244,20 +258,38 @@ export default function MemberEventsPage() {
                     </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2 flex-wrap">
                   {event.event_date && (
                     <span className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
                       {formatDate(event.event_date)}
                     </span>
                   )}
-                  {event.location && (
+                  {(event.venue_name || event.location) && (
                     <span className="flex items-center gap-1">
                       <MapPin className="h-4 w-4" />
-                      {event.location}
+                      {event.venue_name || event.location}
                     </span>
                   )}
                 </div>
+                {(event.fee_label ||
+                  event.registration_closes_at_local ||
+                  event.music_deadline_at_local) && (
+                  <div className="text-xs text-muted-foreground mt-2 space-y-0.5">
+                    {event.fee_label && (
+                      <p>Fee: {event.fee_label} (pay via Registrations)</p>
+                    )}
+                    {event.registration_opens_at_local && (
+                      <p>Reg opens: {event.registration_opens_at_local}</p>
+                    )}
+                    {event.registration_closes_at_local && (
+                      <p>Reg closes: {event.registration_closes_at_local}</p>
+                    )}
+                    {event.music_deadline_at_local && (
+                      <p>Music deadline: {event.music_deadline_at_local}</p>
+                    )}
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
