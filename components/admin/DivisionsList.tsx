@@ -30,11 +30,18 @@ import type { Division } from '@/lib/types/database'
 interface DivisionsListProps {
   divisions: Division[]
   eventId: string
+  /** Prompt 16: /admin/events or /organize/events — User: "ok let do Prompt 16" */
+  basePath?: '/admin/events' | '/organize/events'
 }
 
-export default function DivisionsList({ divisions, eventId }: DivisionsListProps) {
+export default function DivisionsList({
+  divisions,
+  eventId,
+  basePath = '/admin/events',
+}: DivisionsListProps) {
   const router = useRouter()
   const supabase = createClient()
+  const root = `${basePath}/${eventId}`
 
   const handleDelete = async (divisionId: string, divisionName: string) => {
     if (!confirm(`Are you sure you want to delete "${divisionName}"? This will also delete all related scores.`)) {
@@ -80,8 +87,8 @@ export default function DivisionsList({ divisions, eventId }: DivisionsListProps
         {divisions.map((division) => (
           <TableRow key={division.id}>
             <TableCell>
-              <Link 
-                href={`/admin/events/${eventId}/divisions/${division.id}`}
+              <Link
+                href={`${root}/divisions/${division.id}`}
                 className="font-medium hover:underline"
               >
                 {division.name}
@@ -112,13 +119,13 @@ export default function DivisionsList({ divisions, eventId }: DivisionsListProps
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
-                    <Link href={`/admin/events/${eventId}/divisions/${division.id}`}>
+                    <Link href={`${root}/divisions/${division.id}`}>
                       <Users className="h-4 w-4 mr-2" />
                       Manage Participants
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href={`/admin/events/${eventId}/divisions/${division.id}/edit`}>
+                    <Link href={`${root}/divisions/${division.id}/edit`}>
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </Link>

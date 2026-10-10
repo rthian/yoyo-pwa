@@ -81,7 +81,8 @@ middleware.ts           # Route protection: /admin, /judge, /member require auth
 ### Route Groups & Layouts
 
 Routes are organized in Next.js [route groups](https://nextjs.org/docs/app/building-your-application/routing/route-groups):
-- `(admin)` — admin layout wrapping all admin pages
+- `(admin)` — admin layout wrapping all admin pages (global `members.role === 'admin'` only)
+- `(organizer)` — `/organize` event ops for accounts with `event_staff_roles` (Prompt 16; capability-gated panels)
 - `(judge)` — judge layout (mobile-first, bottom nav)
 - `(member)` — member layout
 
@@ -89,7 +90,7 @@ The root `app/page.tsx` checks the user's role and redirects to the appropriate 
 
 ### Authentication & Authorization
 
-1. **Middleware** (`middleware.ts`): Checks for a Supabase session on protected routes (`/admin`, `/judge`, `/member`). Unauthenticated requests redirect to `/login`.
+1. **Middleware** (`middleware.ts`): Checks for a Supabase session on protected routes (`/admin`, `/judge`, `/member`, `/organize`). Unauthenticated requests redirect to `/login`.
 2. **Role enforcement** happens in individual page components (not middleware) by reading the `member.role` from the database.
 3. **Auth Context** (`lib/auth/context.tsx`): Client-side React context providing `user` and `member` objects.
 4. **Server Actions** (`lib/auth/actions.ts`): `signOut`, `getCurrentUser`, `updatePassword`, etc.

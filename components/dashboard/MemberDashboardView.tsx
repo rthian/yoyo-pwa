@@ -45,6 +45,8 @@ interface MemberEvent {
 export default function MemberDashboardView({ member }: MemberDashboardViewProps) {
   const [events, setEvents] = useState<MemberEvent[]>([])
   const [loading, setLoading] = useState(true)
+  // Prompt 16 staff CTA. Callers: this dashboard. User: "ok let do Prompt 16"
+  const [staffEventCount, setStaffEventCount] = useState(0)
 
   useEffect(() => {
     async function fetchMemberData() {
@@ -61,7 +63,20 @@ export default function MemberDashboardView({ member }: MemberDashboardViewProps
       }
     }
 
+    async function fetchStaffed() {
+      try {
+        const res = await fetch('/api/organize/events')
+        if (res.ok) {
+          const data = await res.json()
+          setStaffEventCount((data.events || []).length)
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
     fetchMemberData()
+    fetchStaffed()
   }, [])
 
   const formatTime = (dateStr: string | null) => {
@@ -118,6 +133,23 @@ export default function MemberDashboardView({ member }: MemberDashboardViewProps
               {countryDisplay ? '· ' : ''}Here&apos;s your competition overview
             </p>
           </div>
+
+          {staffEventCount > 0 && (
+            <Card className="mb-6 border-primary/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Event ops</CardTitle>
+                <CardDescription>
+                  You staff {staffEventCount} event
+                  {staffEventCount === 1 ? '' : 's'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button asChild>
+                  <Link href="/organize">Open organize</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Upcoming Sessions - Priority Section */}
           <Card className="mb-6 border-primary/20">

@@ -13,6 +13,8 @@ import { toast } from 'sonner'
 interface MusicReadinessPanelProps {
   divisionId: string
   eventId?: string
+  /** Prompt 16: override music ops link. Callers: organize division page. User: "ok let do Prompt 16" */
+  eventOpsHref?: string
 }
 
 type Submission = {
@@ -25,6 +27,7 @@ type Submission = {
 export default function MusicReadinessPanel({
   divisionId,
   eventId,
+  eventOpsHref,
 }: MusicReadinessPanelProps) {
   const [rows, setRows] = useState<Submission[]>([])
   const [loading, setLoading] = useState(true)
@@ -90,7 +93,9 @@ export default function MusicReadinessPanel({
         <h3 className="font-medium">Music readiness</h3>
         {eventId && (
           <Button variant="link" size="sm" className="h-auto p-0" asChild>
-            <a href={`/admin/events/${eventId}?tab=music`}>Event music ops →</a>
+            <a href={eventOpsHref ?? `/admin/events/${eventId}?tab=music`}>
+              Event music ops →
+            </a>
           </Button>
         )}
       </div>

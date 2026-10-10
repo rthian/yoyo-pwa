@@ -32,6 +32,8 @@ import {
 
 interface EventFormProps {
   event?: Event
+  /** Prompt 16: /admin/events or /organize/events — User: "ok let do Prompt 16" */
+  basePath?: '/admin/events' | '/organize/events'
 }
 
 type LocalTimingState = {
@@ -44,7 +46,10 @@ type LocalTimingState = {
   check_in_closes_at: string
 }
 
-export default function EventForm({ event }: EventFormProps) {
+export default function EventForm({
+  event,
+  basePath = '/admin/events',
+}: EventFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [rulesets, setRulesets] = useState<Ruleset[]>([])
@@ -208,7 +213,7 @@ export default function EventForm({ event }: EventFormProps) {
           throw new Error(result.error || 'Failed to update event')
         }
         toast.success('Event updated successfully')
-        router.push(`/admin/events/${event.id}`)
+        router.push(`${basePath}/${event.id}`)
       } else {
         const response = await fetch('/api/events', {
           method: 'POST',
@@ -220,7 +225,7 @@ export default function EventForm({ event }: EventFormProps) {
           throw new Error(result.error || 'Failed to create event')
         }
         toast.success('Event created successfully')
-        router.push(`/admin/events/${result.event.id}`)
+        router.push(`${basePath}/${result.event.id}`)
       }
       router.refresh()
     } catch (error) {
