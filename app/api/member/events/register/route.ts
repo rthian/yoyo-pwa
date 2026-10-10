@@ -1,14 +1,24 @@
 /**
- * Member registration — uses Prompt 5 aggregate (confirmed → division_members).
+ * Member registration — Prompt 5 aggregate + Prompt 17 competitor_id.
  */
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import {
   cancelRegistration,
-  registerSelfForDivision,
+  registerCompetitorForDivision,
 } from '@/lib/registration/service'
-import { getCompetitorIdsForAccount, getCompetitorIdForMember } from '@/lib/identity/competitors'
+import {
+  assertManagesCompetitor,
+  getCompetitorIdForMember,
+} from '@/lib/identity/competitors'
+
+const bodySchema = z.object({
+  division_id: z.string().uuid(),
+  action: z.enum(['register', 'unregister']),
+  competitor_id: z.string().uuid().optional().nullable(),
+})
 
 export async function POST(request: Request) {
   try {
@@ -22,31 +32,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { division_id, action } = body
-
-    if (!division_id || !['register', 'unregister'].includes(action)) {
+    const parsed = bodySchema.safeParse(await request.json())
+    if (!parsed.success) {
       return NextResponse.json(
         {
           error:
-            'Invalid request. Provide division_id and action (register/unregister).',
+            'Invalid request. Provide division_id (uuid) and action (register/unregister).',
+          details: parsed.error.flatten(),
         },
         { status: 400 }
       )
     }
 
+    const { division_id, action, competitor_id } = parsed.data
+
     if (action === 'register') {
       try {
-        const result = await registerSelfForDivision(supabaseAdmin, {
+        const result = await registerCompetitorForDivision(supabaseAdmin, {
           accountId: user.id,
           divisionId: division_id,
+          competitorId: competitor_id || null,
         })
         return NextResponse.json({
           message:
             result.entry.status === 'waitlisted'
               ? 'Waitlisted for this division'
               : 'Successfully registered',
-          registered: result.entry.status === 'confirmed' || result.entry.status === 'checked_in',
+          registered:
+            result.entry.status === 'confirmed' ||
+            result.entry.status === 'checked_in',
           waitlisted: result.entry.status === 'waitlisted',
           registration: result.registration,
           entry: result.entry,
@@ -63,19 +77,37 @@ export async function POST(request: Request) {
       }
     }
 
-    // unregister: cancel entry for this division if present; else legacy delete
-    const { data: division } = await supabaseAdmin
-      .from('divisions')
-      .select('id, event_id')
-      .eq('id', division_id)
-      .single()
+    // unregister — scoped to one competitor only
+    try {
+      const { data: division } = await supabaseAdmin
+        .from('divisions')
+        .select('id, event_id')
+        .eq('id', division_id)
+        .single()
 
-    if (!division) {
-      return NextResponse.json({ error: 'Division not found' }, { status: 404 })
-    }
+      if (!division) {
+        return NextResponse.json({ error: 'Division not found' }, { status: 404 })
+      }
 
-    const competitorId = await getCompetitorIdForMember(supabaseAdmin, user.id)
-    if (competitorId) {
+      let competitorId: string | null = competitor_id || null
+      if (competitorId) {
+        await assertManagesCompetitor(
+          supabaseAdmin,
+          user.id,
+          competitorId,
+          'register'
+        )
+      } else {
+        competitorId = await getCompetitorIdForMember(supabaseAdmin, user.id)
+      }
+
+      if (!competitorId) {
+        return NextResponse.json({
+          message: 'Successfully unregistered',
+          registered: false,
+        })
+      }
+
       const { data: reg } = await supabaseAdmin
         .from('registrations')
         .select('id')
@@ -98,6 +130,13 @@ export async function POST(request: Request) {
             .eq('id', entry.division_member_id)
         }
 
+        // Also clear any legacy seat for this competitor+division
+        await supabaseAdmin
+          .from('division_members')
+          .delete()
+          .eq('division_id', division_id)
+          .eq('competitor_id', competitorId)
+
         if (entry) {
           await supabaseAdmin
             .from('registration_entries')
@@ -113,7 +152,13 @@ export async function POST(request: Request) {
           .from('registration_entries')
           .select('*', { count: 'exact', head: true })
           .eq('registration_id', reg.id)
-          .in('status', ['confirmed', 'pending', 'waitlisted', 'draft', 'checked_in'])
+          .in('status', [
+            'confirmed',
+            'pending',
+            'waitlisted',
+            'draft',
+            'checked_in',
+          ])
 
         if ((count ?? 0) === 0) {
           await cancelRegistration(supabaseAdmin, {
@@ -128,24 +173,32 @@ export async function POST(request: Request) {
           registered: false,
         })
       }
+
+      // Legacy: division_members only for this competitor
+      const { error: deleteError } = await supabaseAdmin
+        .from('division_members')
+        .delete()
+        .eq('division_id', division_id)
+        .eq('competitor_id', competitorId)
+
+      if (deleteError) {
+        return NextResponse.json({ error: deleteError.message }, { status: 500 })
+      }
+
+      return NextResponse.json({
+        message: 'Successfully unregistered',
+        registered: false,
+      })
+    } catch (err) {
+      const status = (err as Error & { status?: number }).status ?? 500
+      console.error('Unregister error:', err)
+      return NextResponse.json(
+        {
+          error: err instanceof Error ? err.message : 'Unregister failed',
+        },
+        { status: status === 403 ? 403 : status === 400 ? 400 : 500 }
+      )
     }
-
-    const competitorIds = await getCompetitorIdsForAccount(supabaseAdmin, user.id)
-    if (!competitorIds.length) {
-      return NextResponse.json({ message: 'Successfully unregistered', registered: false })
-    }
-
-    const { error: deleteError } = await supabaseAdmin
-      .from('division_members')
-      .delete()
-      .eq('division_id', division_id)
-      .in('competitor_id', competitorIds)
-
-    if (deleteError) {
-      return NextResponse.json({ error: deleteError.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ message: 'Successfully unregistered', registered: false })
   } catch (error) {
     console.error('Registration error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

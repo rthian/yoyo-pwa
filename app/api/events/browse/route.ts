@@ -52,13 +52,16 @@ export async function GET() {
     const { data: registrations } = competitorIds.length
       ? await supabaseAdmin
           .from('division_members')
-          .select('division_id')
+          .select('division_id, competitor_id')
           .in('competitor_id', competitorIds)
-      : { data: [] as { division_id: string }[] }
+      : { data: [] as { division_id: string; competitor_id: string }[] }
 
-    const registeredDivisionIds = new Set(
-      (registrations || []).map(r => r.division_id)
-    )
+    const registeredByDivision = new Map<string, string[]>()
+    for (const r of registrations || []) {
+      const list = registeredByDivision.get(r.division_id) ?? []
+      list.push(r.competitor_id)
+      registeredByDivision.set(r.division_id, list)
+    }
 
     // Get participant counts per division
     const allDivisionIds = (events || []).flatMap(e =>
@@ -94,7 +97,8 @@ export async function GET() {
         .sort((a, b) => a.sort_order - b.sort_order)
         .map(d => ({
           ...d,
-          is_registered: registeredDivisionIds.has(d.id),
+          is_registered: (registeredByDivision.get(d.id)?.length ?? 0) > 0,
+          registered_competitor_ids: registeredByDivision.get(d.id) || [],
           participant_count: countMap.get(d.id) || 0,
         })),
     }))

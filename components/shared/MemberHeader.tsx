@@ -7,13 +7,14 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { BarChart3, Calendar, Trophy, Home, ClipboardList } from 'lucide-react'
+import { BarChart3, Calendar, Trophy, Home, ClipboardList, Users } from 'lucide-react'
 import UserProfileMenu from './UserProfileMenu'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: Home },
   { href: '/member/events', label: 'Events', icon: Calendar },
   { href: '/member/registrations', label: 'Registrations', icon: ClipboardList },
+  { href: '/member/competitors', label: 'Competitors', icon: Users },
   { href: '/leaderboards', label: 'Leaderboards', icon: Trophy },
   { href: '/rankings', label: 'Rankings', icon: BarChart3 },
 ]
