@@ -20,6 +20,10 @@ import type { Event, EventStatus } from '@/lib/types/database'
 
 interface EventStatusActionsProps {
   event: Event
+  /** When false, hide cancelled transitions. Default true. */
+  canCancel?: boolean
+  /** When false, only cancel (if allowed) is offered. Default true. */
+  canManageStatus?: boolean
 }
 
 const statusConfig: Record<EventStatus, { label: string; color: string; nextStates: EventStatus[] }> = {
@@ -50,12 +54,19 @@ const statusConfig: Record<EventStatus, { label: string; color: string; nextStat
   },
 }
 
-export default function EventStatusActions({ event }: EventStatusActionsProps) {
+export default function EventStatusActions({
+  event,
+  canCancel = true,
+  canManageStatus = true,
+}: EventStatusActionsProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
 
   const currentStatus = statusConfig[event.status]
-  const availableTransitions = currentStatus.nextStates
+  const availableTransitions = currentStatus.nextStates.filter((s) => {
+    if (s === 'cancelled') return canCancel
+    return canManageStatus
+  })
 
   const handleStatusChange = async (newStatus: EventStatus) => {
     setLoading(true)
