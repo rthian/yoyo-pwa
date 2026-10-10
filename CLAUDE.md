@@ -174,7 +174,7 @@ Applied in order from `supabase/migrations/`:
 18. `026_registration_payments.sql` — Prompt 20: event payment config + `registration_receipts` (private bucket `registration-receipts`)
 19. `027_comms_notifications.sql` — Prompt 22: `notification_preferences`, `comms_outbox`, `event_comms_log`
 
-**Planned (17+):** [`docs/PROMPTS_17_PLUS.md`](docs/PROMPTS_17_PLUS.md) — **17 guardians**, advancement (18), **19 lifecycle (shipped)**, **20 QR/receipts (026)**, hub (21), **22 comms (027)**, hygiene (23).
+**Planned (17+):** [`docs/PROMPTS_17_PLUS.md`](docs/PROMPTS_17_PLUS.md) — **17 guardians**, **18 advancement (shipped)**, **19 lifecycle (shipped)**, **20 QR/receipts (026)**, hub (21), **22 comms (027)**, hygiene (23).
 
 ---
 

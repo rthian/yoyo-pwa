@@ -1,6 +1,6 @@
 # Prompts 17+ — Product playbook
 
-**Status:** Prompts **17**, **19**, **20**, **22** on app; apply migrations `026`–`027` after deploy. Identity through `025`.  
+**Status:** Prompts **17**, **18**, **19**, **20**, **22** on app; apply migrations `026`–`027` after deploy. Identity through `025`.  
 **Payments:** Manual QR + receipt verification (**20**); Stripe deferred.
 
 ---
@@ -33,6 +33,8 @@
 ---
 
 ## Prompt 18 — Track advancement ops
+
+**Shipped:** explicit apply seats `division_members`; capacity preview/warnings; decision history on Tracks panel (organize + admin).
 
 - `/organize` (+ admin): advancement decisions from `PATCH /api/events/[id]/tracks` (`advancement_decision`, `apply: true`).
 - History from `advancement_decisions`; capacity warnings before apply.

@@ -653,3 +653,38 @@ export interface EventCommsLogRow {
   outbox_ids: string[]
   created_at: string
 }
+
+
+/** Prompt 18 — competition track advancement */
+export type AdvancementDecisionType =
+  | 'advanced'
+  | 'not_advanced'
+  | 'seeded'
+  | 'wildcard'
+  | 'override'
+
+export interface AdvancementDecisionRow {
+  id: string
+  track_id: string
+  rule_id: string | null
+  competitor_id: string
+  from_division_id: string
+  to_division_id: string
+  decision: AdvancementDecisionType
+  reason: string | null
+  actor_account_id: string | null
+  applied: boolean
+  created_at: string
+}
+
+export interface CompetitionTrackRow {
+  id: string
+  event_id: string
+  name: string
+  description: string | null
+  category_id: string | null
+  sort_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
