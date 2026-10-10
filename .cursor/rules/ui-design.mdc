@@ -1,0 +1,9 @@
+---
+description: Frontend UI/UX and Component Standards
+globs: "**/*.{tsx,jsx,vue,svelte,html}"
+---
+- Always follow a cohesive design system (typography, spacing scale, color palette).
+- Use modern component primitives (e.g., Radix UI, shadcn/ui, Tailwind).
+- Ensure WCAG AA accessibility: minimum 4.5:1 text contrast and interactive focus states.
+- Implement mobile-first layouts with smooth transitions (150-200ms ease-out).
+- Never hardcode arbitrary colors; use theme variables or design tokens.

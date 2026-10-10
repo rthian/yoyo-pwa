@@ -1,0 +1,304 @@
+{
+  "schemaVersion": 1,
+  "targets": {
+    "/": {
+      "targetKind": "existing-ui",
+      "projectId": "e32476ec-5a26-462b-be84-169946f7dff6",
+      "baselineDraftId": "c991b947-829b-46e9-b8aa-163a3eee9dc5",
+      "activeDraftId": "d644a430-e263-4bdd-9628-677e8157654a",
+      "designSystemPath": ".superdesign/design-system.md",
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        ".superdesign/init/theme.md",
+        "components/landing/LandingPage.tsx",
+        "components/ui/button.tsx",
+        "components/ui/card.tsx",
+        "lib/utils.ts",
+        "app/globals.css"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "71b6084d1f3d42b3e859c945498d652a29407395522e50570805468bb6699345",
+        ".superdesign/init/theme.md": "123a2aea316c38449b1fe72f2c34fef623dcd5545201754af890d97f782d19c0",
+        "components/landing/LandingPage.tsx": "7bd1ef9b906d35c52911b5126698d7fb4b7e52cb1d7312c003f8c9e87e9a86eb",
+        "components/ui/button.tsx": "3bdbcc05c1cf1a9a1897428ca1f05e8c3394ad835affb340cfbfb613eda3bc52",
+        "components/ui/card.tsx": "fb11444595cd485ca086a9ce0cabde225b6a3594af60c48c1aed990d0abb0943",
+        "lib/utils.ts": "7c8c3dfc0cdd370d44932828eb067ef771c8fe7996693221d5d4b90af6d54f2d",
+        "app/globals.css": "3fb60f8cc2daf0d6dad3ca9df36b041042f1d8a94f27a8881a02d63c2ad4abcc"
+      },
+      "components": [],
+      "drafts": {
+        "c991b947-829b-46e9-b8aa-163a3eee9dc5": {
+          "title": "Current Landing",
+          "visualDirection": "current reproduction"
+        },
+        "b8669e98-8a6f-432d-9413-8a8367d4c8dd": {
+          "title": "Arena Night Redesign",
+          "visualDirection": "full-bleed dark brand hero",
+          "parentDraftId": "c991b947-829b-46e9-b8aa-163a3eee9dc5"
+        },
+        "04e4b01e-0bd7-41a4-b33f-e6f0dba78829": {
+          "title": "Arena Night Editorial Landing",
+          "visualDirection": "editorial split + leaderboard teaser",
+          "parentDraftId": "c991b947-829b-46e9-b8aa-163a3eee9dc5"
+        },
+        "d644a430-e263-4bdd-9628-677e8157654a": {
+          "title": "M3 Expressive Landing Light (mobile UX)",
+          "visualDirection": "m3-mobile-ux-landing",
+          "parentDraftId": "c991b947-829b-46e9-b8aa-163a3eee9dc5"
+        },
+        "8458fe2e-e172-4317-a71e-04037b288abf": {
+          "title": "M3 Expressive Landing Dark",
+          "visualDirection": "material-3-expressive-dark",
+          "parentDraftId": "c991b947-829b-46e9-b8aa-163a3eee9dc5"
+        }
+      },
+      "updatedAt": "2026-09-18T16:30:00.000Z"
+    },
+    "/leaderboard/[divisionId]": {
+      "targetKind": "existing-ui",
+      "projectId": "e32476ec-5a26-462b-be84-169946f7dff6",
+      "baselineDraftId": "c66ec4f6-a113-4dd0-bc6a-835e86ad9364",
+      "activeDraftId": "25999ad0-4842-413a-b00a-919db3b7413c",
+      "designSystemPath": ".superdesign/design-system.md",
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        ".superdesign/init/theme.md",
+        "app/leaderboard/[divisionId]/page.tsx",
+        "components/leaderboard/Podium.tsx",
+        "components/leaderboard/LeaderboardRow.tsx",
+        "components/ui/card.tsx",
+        "components/ui/badge.tsx",
+        "components/ui/button.tsx",
+        "app/globals.css"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "71b6084d1f3d42b3e859c945498d652a29407395522e50570805468bb6699345",
+        ".superdesign/init/theme.md": "123a2aea316c38449b1fe72f2c34fef623dcd5545201754af890d97f782d19c0",
+        "app/leaderboard/[divisionId]/page.tsx": "3512b262cc2cc68b31cf5b3fcee252ee8b64e69fe83d2466c1c78a02f3e05686",
+        "components/leaderboard/Podium.tsx": "70afe9adbb0031754a7d65afa5646dab971f90fdc6014c4613ac4aa1bdaa5218",
+        "components/leaderboard/LeaderboardRow.tsx": "277d12d53c7e12d5668a2d7ba4f6b20c89c1ce5165a1eae49b1692ac14575d8a",
+        "components/ui/card.tsx": "fb11444595cd485ca086a9ce0cabde225b6a3594af60c48c1aed990d0abb0943",
+        "components/ui/badge.tsx": "c488759ccac711bab316aab8b012d5a4da04f0e56daaa3adb908c2437ade4d5f",
+        "components/ui/button.tsx": "3bdbcc05c1cf1a9a1897428ca1f05e8c3394ad835affb340cfbfb613eda3bc52",
+        "app/globals.css": "3fb60f8cc2daf0d6dad3ca9df36b041042f1d8a94f27a8881a02d63c2ad4abcc"
+      },
+      "components": [],
+      "drafts": {
+        "c66ec4f6-a113-4dd0-bc6a-835e86ad9364": {
+          "title": "Current Live Leaderboard",
+          "visualDirection": "current reproduction"
+        },
+        "6e23a0a1-a339-4fd6-a4c6-c9f6e05b2816": {
+          "title": "Arena Night Live Leaderboard",
+          "visualDirection": "dark stage podium",
+          "parentDraftId": "c66ec4f6-a113-4dd0-bc6a-835e86ad9364"
+        },
+        "f3f744e9-34a6-48dd-b648-55eeb1f0c9a2": {
+          "title": "TV Broadcast Leaderboard",
+          "visualDirection": "broadcast / massive ranks",
+          "parentDraftId": "c66ec4f6-a113-4dd0-bc6a-835e86ad9364"
+        },
+        "25999ad0-4842-413a-b00a-919db3b7413c": {
+          "title": "M3 Expressive Leaderboard Light (mobile UX)",
+          "visualDirection": "m3-mobile-ux-leaderboard",
+          "parentDraftId": "c66ec4f6-a113-4dd0-bc6a-835e86ad9364"
+        },
+        "ec97070b-bc7c-4460-8c3d-b0001192a026": {
+          "title": "M3 Expressive Leaderboard Dark",
+          "visualDirection": "material-3-expressive-dark",
+          "parentDraftId": "c66ec4f6-a113-4dd0-bc6a-835e86ad9364"
+        }
+      },
+      "updatedAt": "2026-09-18T16:30:00.000Z"
+    },
+    "/judge": {
+      "targetKind": "existing-ui",
+      "projectId": "e32476ec-5a26-462b-be84-169946f7dff6",
+      "baselineDraftId": "74a5bd46-e64a-4d0c-a534-3b7e826f6068",
+      "activeDraftId": "74a5bd46-e64a-4d0c-a534-3b7e826f6068",
+      "designSystemPath": ".superdesign/design-system.md",
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        ".superdesign/init/theme.md",
+        "app/(judge)/judge/page.tsx",
+        "app/(judge)/layout.tsx",
+        "components/judge/JudgeHeader.tsx",
+        "components/judge/JudgeBottomNav.tsx",
+        "components/ui/card.tsx",
+        "components/ui/badge.tsx",
+        "app/globals.css"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "71b6084d1f3d42b3e859c945498d652a29407395522e50570805468bb6699345",
+        ".superdesign/init/theme.md": "123a2aea316c38449b1fe72f2c34fef623dcd5545201754af890d97f782d19c0",
+        "app/(judge)/judge/page.tsx": "e68369056c329a604e6682657eed9247d139aa1dc1fd64486462a9b4d6d665ef",
+        "app/(judge)/layout.tsx": "c7e829c075f83f3c0df3afc756045901356b96fad0388ad8bda113d73a23d0a7",
+        "components/judge/JudgeHeader.tsx": "fd138cc3f8873c5651963f043935845e780cfcb50272e624f2e77d37668edbe3",
+        "components/judge/JudgeBottomNav.tsx": "a4d95d79ea06ba46b1126f8d72aad2005e14304e695a5e9ca6a7c051041fd939",
+        "components/ui/card.tsx": "fb11444595cd485ca086a9ce0cabde225b6a3594af60c48c1aed990d0abb0943",
+        "components/ui/badge.tsx": "c488759ccac711bab316aab8b012d5a4da04f0e56daaa3adb908c2437ade4d5f",
+        "app/globals.css": "3fb60f8cc2daf0d6dad3ca9df36b041042f1d8a94f27a8881a02d63c2ad4abcc"
+      },
+      "components": [
+        {
+          "name": "JudgeHeader",
+          "id": "df1b35fd-b76d-448f-a3ac-7375330538e7",
+          "sourcePath": "components/judge/JudgeHeader.tsx"
+        },
+        {
+          "name": "JudgeBottomNav",
+          "id": "80e9bb05-6ed2-41f9-a450-98b07d45d483",
+          "sourcePath": "components/judge/JudgeBottomNav.tsx"
+        }
+      ],
+      "drafts": {
+        "74a5bd46-e64a-4d0c-a534-3b7e826f6068": {
+          "title": "Current Judge Home",
+          "visualDirection": "current reproduction"
+        },
+        "8135f451-68b8-4409-8057-90bf3ae60221": {
+          "title": "Judge Console Home - Arena Night",
+          "visualDirection": "dark mobile console",
+          "parentDraftId": "74a5bd46-e64a-4d0c-a534-3b7e826f6068"
+        },
+        "4fe936e1-27e0-4430-a472-18cf0617b760": {
+          "title": "Judge Home - Competition Day",
+          "visualDirection": "hero pending + CTA",
+          "parentDraftId": "74a5bd46-e64a-4d0c-a534-3b7e826f6068"
+        },
+        "cb44f21d-20c8-4914-9d68-24b855e6e225": {
+          "title": "M3 Expressive Judge Home Light",
+          "visualDirection": "material-3-expressive-light",
+          "parentDraftId": "74a5bd46-e64a-4d0c-a534-3b7e826f6068"
+        },
+        "b9f23f8d-f619-4e65-adf3-2d0754c13f2d": {
+          "title": "M3 Expressive Judge Home Dark",
+          "visualDirection": "material-3-expressive-dark",
+          "parentDraftId": "74a5bd46-e64a-4d0c-a534-3b7e826f6068"
+        }
+      },
+      "updatedAt": "2026-09-18T16:00:00.000Z"
+    },
+    "/judge/scoring": {
+      "targetKind": "existing-ui",
+      "projectId": "e32476ec-5a26-462b-be84-169946f7dff6",
+      "baselineDraftId": "f6a0e336-9a3f-43b2-b7f7-f615ff804e15",
+      "activeDraftId": "6aeee25c-0734-4082-9614-35ad7b040d29",
+      "designSystemPath": ".superdesign/design-system.md",
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        ".superdesign/init/theme.md",
+        "components/judge/ScoringForm.tsx",
+        "components/judge/ClickerInput.tsx",
+        "components/ui/button.tsx",
+        "components/ui/card.tsx",
+        "components/ui/badge.tsx",
+        "app/globals.css"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "71b6084d1f3d42b3e859c945498d652a29407395522e50570805468bb6699345",
+        ".superdesign/init/theme.md": "123a2aea316c38449b1fe72f2c34fef623dcd5545201754af890d97f782d19c0",
+        "components/judge/ScoringForm.tsx": "26e374562f2ed8813d85ab0d3e5ebb0d23dad876c1a643d9021f9eda143001a4",
+        "components/judge/ClickerInput.tsx": "837ee8871bb78b5d9d8b2186311863bd9bc016f5dadedea3fcd84b7fa638e7d0",
+        "components/ui/button.tsx": "3bdbcc05c1cf1a9a1897428ca1f05e8c3394ad835affb340cfbfb613eda3bc52",
+        "components/ui/card.tsx": "fb11444595cd485ca086a9ce0cabde225b6a3594af60c48c1aed990d0abb0943",
+        "components/ui/badge.tsx": "c488759ccac711bab316aab8b012d5a4da04f0e56daaa3adb908c2437ade4d5f",
+        "app/globals.css": "3fb60f8cc2daf0d6dad3ca9df36b041042f1d8a94f27a8881a02d63c2ad4abcc"
+      },
+      "components": [],
+      "drafts": {
+        "f6a0e336-9a3f-43b2-b7f7-f615ff804e15": {
+          "title": "Current Judge Scoring",
+          "visualDirection": "current reproduction"
+        },
+        "81eaa108-fe0f-4738-80b2-763d77257e8a": {
+          "title": "Eyes-Free Judge Scoring",
+          "visualDirection": "one field per viewport",
+          "parentDraftId": "f6a0e336-9a3f-43b2-b7f7-f615ff804e15"
+        },
+        "d2aa78f7-291f-41e2-9b03-9fb8b3005162": {
+          "title": "Arena Night Scoring Console",
+          "visualDirection": "dark clicker console",
+          "parentDraftId": "f6a0e336-9a3f-43b2-b7f7-f615ff804e15"
+        },
+        "6aeee25c-0734-4082-9614-35ad7b040d29": {
+          "title": "M3 Expressive Scoring Light (mobile UX)",
+          "visualDirection": "m3-mobile-ux-scoring",
+          "parentDraftId": "f6a0e336-9a3f-43b2-b7f7-f615ff804e15"
+        },
+        "3a65d69d-4984-447b-ba10-3240ae819bdc": {
+          "title": "M3 Expressive Scoring Dark",
+          "visualDirection": "material-3-expressive-dark",
+          "parentDraftId": "f6a0e336-9a3f-43b2-b7f7-f615ff804e15"
+        }
+      },
+      "updatedAt": "2026-09-18T16:30:00.000Z"
+    },
+    "/admin": {
+      "targetKind": "existing-ui",
+      "projectId": "e32476ec-5a26-462b-be84-169946f7dff6",
+      "baselineDraftId": "25c73566-5a9b-407f-b00f-b0b0b5dba421",
+      "activeDraftId": "25c73566-5a9b-407f-b00f-b0b0b5dba421",
+      "designSystemPath": ".superdesign/design-system.md",
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        ".superdesign/init/theme.md",
+        "app/(admin)/admin/page.tsx",
+        "app/(admin)/layout.tsx",
+        "components/admin/AdminHeader.tsx",
+        "components/admin/AdminSidebar.tsx",
+        "components/ui/card.tsx",
+        "app/globals.css"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "71b6084d1f3d42b3e859c945498d652a29407395522e50570805468bb6699345",
+        ".superdesign/init/theme.md": "123a2aea316c38449b1fe72f2c34fef623dcd5545201754af890d97f782d19c0",
+        "app/(admin)/admin/page.tsx": "cc335103190cf3fc1d50bc1fc393d76cce13252ae9344cdd55a021e4f073e187",
+        "app/(admin)/layout.tsx": "57df737e1763498f1a0888211de47a2ac5deca9591b75eff93e33aae9b79d108",
+        "components/admin/AdminHeader.tsx": "ea2d8ad2ef94f4154a99e2a0c5338379e6fadee8a9a2e4d6c6f61e628f690d46",
+        "components/admin/AdminSidebar.tsx": "536db6da0a962774406edb12c3dcbe83f386c0e5b5285f40b337295f2df3134b",
+        "components/ui/card.tsx": "fb11444595cd485ca086a9ce0cabde225b6a3594af60c48c1aed990d0abb0943",
+        "app/globals.css": "3fb60f8cc2daf0d6dad3ca9df36b041042f1d8a94f27a8881a02d63c2ad4abcc"
+      },
+      "components": [
+        {
+          "name": "AdminHeader",
+          "id": "512b93f0-bc76-4ce8-b59a-11d10fd0e4ea",
+          "sourcePath": "components/admin/AdminHeader.tsx"
+        },
+        {
+          "name": "AdminSidebar",
+          "id": "fd50a1f9-b15a-4f97-8ac1-800968f0daee",
+          "sourcePath": "components/admin/AdminSidebar.tsx"
+        }
+      ],
+      "drafts": {
+        "25c73566-5a9b-407f-b00f-b0b0b5dba421": {
+          "title": "Current Admin Dashboard",
+          "visualDirection": "current reproduction"
+        },
+        "14131b22-5cda-4814-98bf-77a51d8e2d43": {
+          "title": "Admin Dashboard - Arena Night Ops",
+          "visualDirection": "dark sidebar ops",
+          "parentDraftId": "25c73566-5a9b-407f-b00f-b0b0b5dba421"
+        },
+        "25b7026c-7c71-4f14-ab58-667ddc9767c7": {
+          "title": "Command Center Admin",
+          "visualDirection": "icon rail + dense metrics",
+          "parentDraftId": "25c73566-5a9b-407f-b00f-b0b0b5dba421"
+        },
+        "5ca30c72-e580-4f9e-88cd-a0355c3c68f0": {
+          "title": "M3 Expressive Admin Light",
+          "visualDirection": "material-3-expressive-light",
+          "parentDraftId": "25c73566-5a9b-407f-b00f-b0b0b5dba421"
+        },
+        "6660cd9b-8796-44f0-ae1b-bc4c1c80db2f": {
+          "title": "M3 Expressive Admin Dark",
+          "visualDirection": "material-3-expressive-dark",
+          "parentDraftId": "25c73566-5a9b-407f-b00f-b0b0b5dba421"
+        }
+      },
+      "updatedAt": "2026-09-18T16:00:00.000Z"
+    }
+  }
+}

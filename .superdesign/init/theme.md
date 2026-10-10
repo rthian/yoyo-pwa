@@ -1,0 +1,234 @@
+# Theme
+
+## Compact token summary
+
+| Token | Light | Dark | Notes |
+|-------|-------|------|-------|
+| `--radius` | 0.75rem | same | Drives radius scale |
+| `--primary` | oklch(0.55 0.22 264) indigo/violet | same | Brand |
+| `--background` | white | dark blue-gray | |
+| `--foreground` | near black | near white | |
+| `--gold` / `--silver` / `--bronze` | podium accents | slight silver tweak | Badge + Podium |
+| `--chart-1`…`5` | primary/gold/silver/bronze/teal | same family | |
+| Fonts | Geist Sans / Geist Mono | `--font-geist-*` | Next Google fonts |
+
+Utilities: `.safe-area-*`, `.touch-none-select`, `.tap-highlight-none`, `.scrollbar-hide`
+
+No `tailwind.config.*` — Tailwind v4 tokens via `@theme inline` in CSS.
+Config: `components.json` style=new-york, baseColor=neutral, cssVariables=true.
+
+## Raw source — app/globals.css
+```css
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-gold: var(--gold);
+  --color-silver: var(--silver);
+  --color-bronze: var(--bronze);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.55 0.22 264);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.55 0.22 264);
+  --gold: oklch(0.85 0.16 95);
+  --silver: oklch(0.72 0.02 264);
+  --bronze: oklch(0.75 0.18 55);
+  --chart-1: oklch(0.55 0.22 264);
+  --chart-2: oklch(0.85 0.16 95);
+  --chart-3: oklch(0.72 0.02 264);
+  --chart-4: oklch(0.75 0.18 55);
+  --chart-5: oklch(0.7 0.17 160);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.55 0.22 264);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.55 0.22 264);
+}
+
+.dark {
+  --background: oklch(0.129 0.014 264);
+  --foreground: oklch(0.985 0.002 264);
+  --card: oklch(0.21 0.014 264);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.21 0.014 264);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.55 0.22 264);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.28 0.014 264);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.28 0.014 264);
+  --muted-foreground: oklch(0.55 0.014 264);
+  --accent: oklch(0.28 0.014 264);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.65 0.2 15);
+  --border: oklch(0.28 0.014 264);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.55 0.22 264);
+  --gold: oklch(0.85 0.16 95);
+  --silver: oklch(0.78 0.02 264);
+  --bronze: oklch(0.75 0.18 55);
+  --chart-1: oklch(0.55 0.22 264);
+  --chart-2: oklch(0.85 0.16 95);
+  --chart-3: oklch(0.78 0.02 264);
+  --chart-4: oklch(0.75 0.18 55);
+  --chart-5: oklch(0.7 0.17 160);
+  --sidebar: oklch(0.21 0.014 264);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.55 0.22 264);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.28 0.014 264);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.28 0.014 264);
+  --sidebar-ring: oklch(0.55 0.22 264);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* PWA Safe Areas for notched devices */
+@layer utilities {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left, 0);
+  }
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right, 0);
+  }
+}
+
+/* Prevent text selection on touch devices for UI elements */
+@layer utilities {
+  .touch-none-select {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+}
+
+/* Smooth scrolling for mobile */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Improve tap targets on mobile */
+@layer utilities {
+  .tap-highlight-none {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Hide scrollbar for clean mobile UI */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+```
+
+## components.json
+```json
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "app/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "rtl": false,
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks"
+  },
+  "registries": {}
+}
+```
