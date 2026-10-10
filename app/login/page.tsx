@@ -143,8 +143,17 @@ export default function LoginPage() {
           <LoginForm />
         </Suspense>
       </div>
-      <footer className="text-center text-xs text-muted-foreground py-4">
-        © {new Date().getFullYear()} YoYo League. Created by <a href="https://github.com/rthian" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">rthian</a>.
+      <footer className="text-center text-xs text-muted-foreground py-4 safe-area-bottom">
+        © {new Date().getFullYear()} YoYo League. Created by{' '}
+        <a
+          href="https://github.com/rthian"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 items-center underline hover:text-foreground"
+        >
+          rthian
+        </a>
+        .
       </footer>
     </div>
   )
