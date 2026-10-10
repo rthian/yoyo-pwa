@@ -1,6 +1,6 @@
 # Prompts 17+ — Product playbook
 
-**Status:** Prompts **17**, **20**, **22** on app; apply migrations `026`–`027` after deploy. Identity through `025`.  
+**Status:** Prompts **17**, **19**, **20**, **22** on app; apply migrations `026`–`027` after deploy. Identity through `025`.  
 **Payments:** Manual QR + receipt verification (**20**); Stripe deferred.
 
 ---
@@ -41,6 +41,8 @@
 ---
 
 ## Prompt 19 — Organize event lifecycle
+
+**Shipped:** `/api/events/[id]/finalize`, panel on `/organize` when `finalize_results`, cancel gated by `cancel_event`, delete via API when `delete_event`.
 
 - `FinalizeEventPanel` on `/organize` when `finalize_results`.
 - Capability-gated `/api/events/[id]/finalize` (not admin-only path).

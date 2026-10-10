@@ -2,7 +2,7 @@
  * Admin panel to finalize event → season ranking points.
  * Caller: app/(admin)/admin/events/[id]/page.tsx mounts <FinalizeEventPanel />.
  * Glob: no FinalizeEventPanel.tsx yet.
- * Calls GET/POST/DELETE /api/admin/events/:id/finalize.
+ * Calls GET/POST/DELETE /api/events/:id/finalize.
  * User: "create a branch for this, plan & build a ranking with point system league leaderboards..."
  */
 'use client'
@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils'
 
 interface FinalizeEventPanelProps {
   eventId: string
+  /** When false, hide revoke (owners lack unfinalize_results). Default true for admin. */
+  canUnfinalize?: boolean
 }
 
 type SoftCue = {
@@ -27,7 +29,10 @@ type SoftCue = {
   integrityRisk: number
 }
 
-export default function FinalizeEventPanel({ eventId }: FinalizeEventPanelProps) {
+export default function FinalizeEventPanel({
+  eventId,
+  canUnfinalize = true,
+}: FinalizeEventPanelProps) {
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(false)
   const [canFinalize, setCanFinalize] = useState(false)
@@ -39,7 +44,7 @@ export default function FinalizeEventPanel({ eventId }: FinalizeEventPanelProps)
   const refresh = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/admin/events/${eventId}/finalize`)
+      const res = await fetch(`/api/events/${eventId}/finalize`)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to load finalize status')
       setCanFinalize(data.canFinalize)
@@ -68,7 +73,7 @@ export default function FinalizeEventPanel({ eventId }: FinalizeEventPanelProps)
     }
     setActing(true)
     try {
-      const res = await fetch(`/api/admin/events/${eventId}/finalize`, { method: 'POST' })
+      const res = await fetch(`/api/events/${eventId}/finalize`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) {
         toast.error(data.error || 'Finalize failed')
@@ -86,7 +91,7 @@ export default function FinalizeEventPanel({ eventId }: FinalizeEventPanelProps)
     if (!confirm('Revoke season points for this event?')) return
     setActing(true)
     try {
-      const res = await fetch(`/api/admin/events/${eventId}/finalize`, { method: 'DELETE' })
+      const res = await fetch(`/api/events/${eventId}/finalize`, { method: 'DELETE' })
       const data = await res.json()
       if (!res.ok) {
         toast.error(data.error || 'Revoke failed')
@@ -170,7 +175,7 @@ export default function FinalizeEventPanel({ eventId }: FinalizeEventPanelProps)
                   Finalize & award points
                 </Button>
               )}
-              {isFinalized && (
+              {isFinalized && canUnfinalize && (
                 <Button variant="outline" onClick={unfinalize} disabled={acting}>
                   Revoke points
                 </Button>

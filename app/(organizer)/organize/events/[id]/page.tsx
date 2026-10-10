@@ -15,6 +15,8 @@ import DivisionsList from '@/components/admin/DivisionsList'
 import EventStatusActions from '@/components/admin/EventStatusActions'
 import ScheduleManager from '@/components/admin/ScheduleManager'
 import PublishResultsPanel from '@/components/admin/PublishResultsPanel'
+import FinalizeEventPanel from '@/components/admin/FinalizeEventPanel'
+import DeleteEventButton from '@/components/admin/DeleteEventButton'
 import EventStaffPanel from '@/components/admin/EventStaffPanel'
 import EventRegistrationsPanel from '@/components/admin/EventRegistrationsPanel'
 import EventTracksPanel from '@/components/admin/EventTracksPanel'
@@ -100,21 +102,34 @@ export default async function OrganizeEventPage({ params, searchParams }: Props)
             ))}
           </div>
         </div>
-        {capabilities.manage_event && (
-          <Link href={`${BASE}/${id}/edit`}>
-            <Button variant="outline">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-          </Link>
-        )}
+        <div className="flex gap-2 flex-wrap">
+          {capabilities.manage_event && (
+            <Link href={`${BASE}/${id}/edit`}>
+              <Button variant="outline">
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            </Link>
+          )}
+          {capabilities.delete_event && (
+            <DeleteEventButton
+              eventId={id}
+              eventName={event.name}
+              redirectTo="/organize"
+            />
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        {capabilities.manage_event && (
+        {(capabilities.manage_event || capabilities.cancel_event) && (
           <Card>
             <CardContent className="flex items-center gap-3 p-4">
-              <EventStatusActions event={event} />
+              <EventStatusActions
+                event={event}
+                canCancel={!!capabilities.cancel_event}
+                canManageStatus={!!capabilities.manage_event}
+              />
             </CardContent>
           </Card>
         )}
@@ -139,6 +154,13 @@ export default async function OrganizeEventPage({ params, searchParams }: Props)
       </div>
 
       {capabilities.publish_results && <PublishResultsPanel eventId={id} />}
+
+      {capabilities.finalize_results && (
+        <FinalizeEventPanel
+          eventId={id}
+          canUnfinalize={!!capabilities.unfinalize_results}
+        />
+      )}
 
       <Tabs defaultValue={defaultTab}>
         <TabsList className="flex flex-wrap h-auto">

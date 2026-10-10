@@ -1,12 +1,10 @@
 /**
- * Delete Event Button Component
- * Handles event deletion with confirmation
+ * Delete Event Button — capability-gated via DELETE /api/events/[id].
  */
 'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -25,14 +23,19 @@ import { toast } from 'sonner'
 interface DeleteEventButtonProps {
   eventId: string
   eventName: string
+  /** Where to go after delete. Default /admin/events */
+  redirectTo?: string
 }
 
-export default function DeleteEventButton({ eventId, eventName }: DeleteEventButtonProps) {
+export default function DeleteEventButton({
+  eventId,
+  eventName,
+  redirectTo = '/admin/events',
+}: DeleteEventButtonProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [confirmText, setConfirmText] = useState('')
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
 
   const handleDelete = async () => {
     if (confirmText !== eventName) {
@@ -43,22 +46,19 @@ export default function DeleteEventButton({ eventId, eventName }: DeleteEventBut
     setLoading(true)
 
     try {
-      const { error } = await supabase
-        .from('events')
-        .delete()
-        .eq('id', eventId)
-
-      if (error) throw error
+      const res = await fetch(`/api/events/${eventId}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to delete event')
 
       toast.success('Event deleted successfully')
-      router.push('/admin/events')
+      setOpen(false)
+      router.push(redirectTo)
       router.refresh()
     } catch (error) {
       console.error('Error deleting event:', error)
-      toast.error('Failed to delete event')
+      toast.error(error instanceof Error ? error.message : 'Failed to delete event')
     } finally {
       setLoading(false)
-      setOpen(false)
     }
   }
 
@@ -78,7 +78,7 @@ export default function DeleteEventButton({ eventId, eventName }: DeleteEventBut
             and all its divisions, participants, and scores.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4 py-4">
           <p className="text-sm text-muted-foreground">
             Please type <strong>{eventName}</strong> to confirm.
@@ -104,7 +104,7 @@ export default function DeleteEventButton({ eventId, eventName }: DeleteEventBut
           </Button>
           <Button
             variant="destructive"
-            onClick={handleDelete}
+            onClick={() => void handleDelete()}
             disabled={loading || confirmText !== eventName}
           >
             {loading ? (
