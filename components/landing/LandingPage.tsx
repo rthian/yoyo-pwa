@@ -42,11 +42,13 @@ export default function LandingPage() {
 
       <div className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pb-8">
         <section className="flex min-h-[60dvh] flex-col items-center justify-center text-center py-10">
-          <p className="text-sm font-medium tracking-wide text-primary">YoYo League</p>
-          <h1 className="mt-2 text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-            Compete. Score. Rank.
+          <h1 className="text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+            YoYo League
           </h1>
-          <p className="mt-3 max-w-sm text-pretty text-base text-muted-foreground leading-relaxed">
+          <p className="mt-3 text-lg font-medium tracking-tight text-primary">
+            Compete. Score. Rank.
+          </p>
+          <p className="mt-2 max-w-sm text-pretty text-base text-muted-foreground leading-relaxed">
             Event management, judging, and live rankings for competitive yo-yo.
           </p>
           <Button asChild size="lg" className="mt-8 min-w-[200px] rounded-full px-8 text-base">
