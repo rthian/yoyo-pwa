@@ -19,7 +19,6 @@ import {
   CheckCircle,
   Clock,
   Coffee,
-  ExternalLink,
   Flag,
   Loader2,
   MapPin,
@@ -28,7 +27,7 @@ import {
   Users,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { kindLabel, providerLabel } from '@/lib/media/external'
+import MediaEmbed from '@/components/media/MediaEmbed'
 
 type TabId = 'register' | 'schedule' | 'boards' | 'results' | 'media'
 
@@ -765,40 +764,13 @@ export default function EventHubClient({ eventId }: { eventId: string }) {
                 <CardHeader>
                   <CardTitle className="text-base">Event media</CardTitle>
                   <CardDescription>
-                    External livestreams, highlights, and albums (opens on the host site).
+                    Livestreams and highlights — tap Load player for YouTube, Vimeo, or Twitch.
+                    Instagram and other links open externally.
                   </CardDescription>
                 </CardHeader>
               </Card>
               {media.map((m) => (
-                <a
-                  key={m.id}
-                  href={m.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block"
-                >
-                  <Card className="hover:bg-accent/40 transition-colors">
-                    <CardContent className="flex items-start justify-between gap-3 py-3">
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{m.title}</p>
-                        {m.description && (
-                          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                            {m.description}
-                          </p>
-                        )}
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          <Badge variant="outline">
-                            {kindLabel(m.kind as never)}
-                          </Badge>
-                          <Badge variant="secondary">
-                            {providerLabel(m.provider as never)}
-                          </Badge>
-                        </div>
-                      </div>
-                      <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    </CardContent>
-                  </Card>
-                </a>
+                <MediaEmbed key={m.id} item={m} />
               ))}
             </TabsContent>
           )}
