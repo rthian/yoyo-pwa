@@ -1,6 +1,6 @@
 # Prompts 17+ — Product playbook
 
-**Status:** Prompts **17**, **18**, **19**, **20**, **22** on app; apply migrations `026`–`027` after deploy. Identity through `025`.  
+**Status:** Prompts **17**–**22** on app (21 hub polish); apply migrations `026`–`027` after deploy. Identity through `025`.  
 **Payments:** Manual QR + receipt verification (**20**); Stripe deferred.
 
 ---
@@ -77,6 +77,8 @@
 ---
 
 ## Prompt 21 — Member event discovery & hub polish
+
+**Shipped:** browse/hub fees + reg windows; hub CompetitorSelector; prep checklist on registrations/hub (shared with 22); music deep links.
 
 - Event detail for members: registration window, fees (20), music deadlines, hub links.
 - Competitor context (17) across browse → register → pay → music.
