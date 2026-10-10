@@ -65,7 +65,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       .select(`
         id,
         play_order,
-        member:members(id, full_name, nickname)
+        competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)
       `)
       .eq('division_id', divisionId)
       .order('play_order', { ascending: true })
@@ -160,9 +160,9 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const participantNames = new Map<string, string>()
     for (const p of participants ?? []) {
-      const raw = p.member as { id: string; full_name: string; nickname: string | null } | { id: string; full_name: string; nickname: string | null }[] | null
-      const member = Array.isArray(raw) ? raw[0] : raw
-      participantNames.set(p.id, member?.full_name ?? 'Unknown')
+      const raw = p.competitor as { id: string; full_name: string; nickname: string | null } | { id: string; full_name: string; nickname: string | null }[] | null
+      const competitor = Array.isArray(raw) ? raw[0] : raw
+      participantNames.set(p.id, competitor?.full_name ?? 'Unknown')
     }
 
     const countingScores = scores.filter((s) => countingJudgeIds.has(s.judge_id))

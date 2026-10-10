@@ -161,7 +161,10 @@ export default function RankingsClient() {
   const focusInBoard = useMemo(() => {
     if (!focusMember || !focusEntry) return false
     return entries.some(
-      (e) => e.memberId === focusEntry.memberId || e.publicId === focusEntry.publicId
+      (e) =>
+        e.memberId === focusEntry.memberId ||
+        e.publicId === focusEntry.publicId ||
+        (e.competitorId && e.competitorId === focusEntry.competitorId)
     )
   }, [focusMember, focusEntry, entries])
 
@@ -430,21 +433,29 @@ export default function RankingsClient() {
       ) : (
         <ul className="divide-y rounded-xl border bg-card">
           {displayEntries.map((e, idx) => {
-            const href = `/players/${e.publicId || e.memberId}`
+            const href = `/players/${e.publicId || e.competitorId || e.memberId}`
             const isFocus =
               Boolean(focusMember) &&
               (e.publicId === focusMember ||
                 e.memberId === focusMember ||
+                e.competitorId === focusMember ||
                 (Boolean(selfFocusKey) &&
-                  (e.publicId === selfFocusKey || e.memberId === selfFocusKey)))
+                  (e.publicId === selfFocusKey ||
+                    e.memberId === selfFocusKey ||
+                    e.competitorId === selfFocusKey)))
             const isDeepPinned =
               Boolean(focusEntry) &&
               !focusInBoard &&
-              e.memberId === focusEntry!.memberId &&
+              (e.memberId === focusEntry!.memberId ||
+                e.competitorId === focusEntry!.competitorId) &&
               idx === displayEntries.length - 1
             return (
               <li
-                key={isDeepPinned ? `focus-${e.memberId}` : e.memberId}
+                key={
+                  isDeepPinned
+                    ? `focus-${e.competitorId || e.memberId}`
+                    : e.competitorId || e.memberId
+                }
                 id={isFocus && isSelfFocus ? 'ranking-you' : undefined}
                 ref={isFocus ? focusRowRef : undefined}
                 className={cn(

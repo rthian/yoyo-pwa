@@ -231,15 +231,21 @@ export async function getPublishedEventResults(
 
   const { data: results } = await supabase
     .from('division_results')
-    .select('division_id, member_id, placement, total_score, score_count')
+    .select('division_id, competitor_id, placement, total_score, score_count')
     .in('division_id', divisionIds)
 
-  const memberIds = [...new Set((results ?? []).map((r) => r.member_id))]
-  const { data: members } = memberIds.length
+  const competitorIds = [
+    ...new Set(
+      (results ?? [])
+        .map((r) => r.competitor_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ]
+  const { data: competitors } = competitorIds.length
     ? await supabase
-        .from('members')
+        .from('competitors')
         .select('id, full_name, public_id, country')
-        .in('id', memberIds)
+        .in('id', competitorIds)
     : {
         data: [] as Array<{
           id: string
@@ -249,26 +255,7 @@ export async function getPublishedEventResults(
         }>,
       }
 
-  const { data: competitors } = memberIds.length
-    ? await supabase
-        .from('competitors')
-        .select('source_member_id, full_name, public_id, country')
-        .in('source_member_id', memberIds)
-    : {
-        data: [] as Array<{
-          source_member_id: string | null
-          full_name: string
-          public_id: string | null
-          country: string | null
-        }>,
-      }
-
-  const memberById = new Map((members ?? []).map((m) => [m.id, m]))
-  const competitorByMember = new Map(
-    (competitors ?? [])
-      .filter((c) => c.source_member_id)
-      .map((c) => [c.source_member_id as string, c])
-  )
+  const competitorById = new Map((competitors ?? []).map((c) => [c.id, c]))
 
   const resultsByDivision = new Map<string, NonNullable<typeof results>>()
   for (const r of results ?? []) {
@@ -292,16 +279,15 @@ export async function getPublishedEventResults(
       sortOrder: d.sort_order,
       scoringLocked: Boolean(d.scoring_locked),
       placements: rows.map((r) => {
-        const comp = competitorByMember.get(r.member_id)
-        const mem = memberById.get(r.member_id)
+        const comp = competitorById.get(r.competitor_id)
         return {
           placement: r.placement,
           totalScore: r.total_score != null ? Number(r.total_score) : null,
           scoreCount: r.score_count ?? 0,
-          memberId: r.member_id,
-          competitorName: comp?.full_name || mem?.full_name || 'Unknown',
-          publicId: comp?.public_id ?? mem?.public_id ?? null,
-          country: comp?.country ?? mem?.country ?? null,
+          memberId: r.competitor_id,
+          competitorName: comp?.full_name || 'Unknown',
+          publicId: comp?.public_id ?? null,
+          country: comp?.country ?? null,
         }
       }),
     }

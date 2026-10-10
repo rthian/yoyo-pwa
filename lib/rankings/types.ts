@@ -108,7 +108,7 @@ export interface PointsTableRow {
 export interface DivisionResult {
   id: string
   division_id: string
-  member_id: string
+  competitor_id: string
   placement: number | null
   total_score: number | null
   score_count: number
@@ -121,7 +121,7 @@ export interface RankingPoints {
   season_id: string
   event_id: string
   category_id: string
-  member_id: string
+  competitor_id: string
   division_id: string | null
   round_type: string
   placement: number | null
@@ -139,7 +139,10 @@ export interface RankingPoints {
 }
 
 export interface LeagueRankingEntry {
+  /** Auth account id (source_member_id) for “my standing” focus */
   memberId: string
+  /** Slice C competition identity */
+  competitorId?: string
   publicId: string | null
   memberName: string
   nickname: string | null
@@ -154,14 +157,19 @@ export interface LeagueRankingEntry {
 }
 
 export interface LeagueStandingsRow {
-  memberId: string
+  /** Nullable after Slice D1; prefer competitorId */
+  memberId: string | null
+  competitorId?: string | null
   totalScore: number
   scoreCount: number
   placement: number | null
 }
 
 export interface PlayerProfile {
+  /** Competitor uuid (Slice C) */
   id: string
+  /** Linked Auth account when self-linked */
+  accountMemberId?: string | null
   publicId: string | null
   fullName: string
   nickname: string | null

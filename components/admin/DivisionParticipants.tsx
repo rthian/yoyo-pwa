@@ -47,8 +47,17 @@ interface DivisionParticipantsProps {
   divisionId: string
 }
 
-interface ParticipantWithMember extends DivisionMember {
-  member: Member
+type CompetitorEmbed = {
+  id: string
+  full_name: string
+  nickname: string | null
+  country: string | null
+  public_id: string | null
+  source_member_id: string | null
+}
+
+interface ParticipantWithCompetitor extends DivisionMember {
+  competitor: CompetitorEmbed
 }
 
 const statusOptions: { value: DivisionMemberStatus; label: string }[] = [
@@ -60,7 +69,7 @@ const statusOptions: { value: DivisionMemberStatus; label: string }[] = [
 ]
 
 export default function DivisionParticipants({ divisionId }: DivisionParticipantsProps) {
-  const [participants, setParticipants] = useState<ParticipantWithMember[]>([])
+  const [participants, setParticipants] = useState<ParticipantWithCompetitor[]>([])
   const [availableMembers, setAvailableMembers] = useState<Member[]>([])
   const [selectedMemberId, setSelectedMemberId] = useState<string>('')
   const [loading, setLoading] = useState(true)
@@ -285,7 +294,7 @@ export default function DivisionParticipants({ divisionId }: DivisionParticipant
                 <TableHead className="w-10" aria-label="Drag to reorder" />
                 <TableHead className="w-12">#</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead>Country</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>

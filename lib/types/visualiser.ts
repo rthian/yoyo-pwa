@@ -5,7 +5,14 @@
 export interface VisualiserParticipant {
   id: string
   play_order: number | null
-  member: { id: string; full_name: string; nickname: string | null } | null
+  competitor: {
+    id: string
+    full_name: string
+    nickname: string | null
+    country?: string | null
+    public_id?: string | null
+    source_member_id?: string | null
+  } | null
 }
 
 export interface VisualiserJudge {

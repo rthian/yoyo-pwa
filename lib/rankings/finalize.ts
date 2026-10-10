@@ -2,7 +2,7 @@
  * Award season ranking points from frozen division results (FIP-style).
  * Called by: app/api/admin/events/[id]/finalize/route.ts
  * No prior finalize.ts (Glob empty under lib/rankings).
- * Writes ranking_points: season_id, event_id, category_id, member_id, round_type,
+ * Writes ranking_points: season_id, event_id, category_id, competitor_id, round_type,
  *   placement, base_points, multiplier, points, event_date (YYYY-MM-DD).
  * User: create a branch… plan & build a ranking with point system league leaderboards…
  */
@@ -172,23 +172,37 @@ export async function finalizeEventPoints(
   }
 
   const divisionIds = divisions.map((d) => d.id)
+  // Slice D2: aggregate / award by competitor_id only
   const { data: results } = await supabase
     .from('division_results')
-    .select('division_id, member_id, placement, score_count')
+    .select('division_id, competitor_id, placement, score_count')
     .in('division_id', divisionIds)
 
-  const memberIds = [...new Set((results ?? []).map((r) => r.member_id))]
-  const { data: members } = memberIds.length
-    ? await supabase.from('members').select('id, home_geo_id').in('id', memberIds)
-    : { data: [] as { id: string; home_geo_id: string | null }[] }
+  const competitorIds = [
+    ...new Set(
+      (results ?? [])
+        .map((r) => r.competitor_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ]
+  const { data: competitors } = competitorIds.length
+    ? await supabase
+        .from('competitors')
+        .select('id, home_geo_id')
+        .in('id', competitorIds)
+    : {
+        data: [] as {
+          id: string
+          home_geo_id: string | null
+        }[],
+      }
 
-  const geoByMember = new Map(
-    (members ?? []).map((m) => [m.id, m.home_geo_id as string | null])
+  const geoByCompetitor = new Map(
+    (competitors ?? []).map((c) => [c.id, c.home_geo_id as string | null])
   )
-
   type Agg = {
     categoryId: string
-    memberId: string
+    competitorId: string
     divisionId: string
     roundType: PointsRoundType
     placement: number
@@ -206,26 +220,33 @@ export async function finalizeEventPoints(
     const roundType = div.round_type as PointsRoundType
 
     const divResults = (results ?? []).filter(
-      (r) => r.division_id === div.id && r.placement != null && r.score_count > 0
+      (r) =>
+        r.division_id === div.id &&
+        r.placement != null &&
+        r.score_count > 0 &&
+        r.competitor_id
     )
     const fieldSize = divResults.length
 
     for (const r of divResults) {
-      const key = `${div.category_id}:${r.member_id}`
+      const competitorId = r.competitor_id as string
+      const key = `${div.category_id}:${competitorId}`
       const existing = bestByKey.get(key)
       const candidate: Agg = {
         categoryId: div.category_id,
-        memberId: r.member_id,
+        competitorId,
         divisionId: div.id,
         roundType,
         placement: r.placement as number,
         fieldSize,
         eligibility: div.eligibility || 'open',
-        fieldScope: (div as { field_scope?: string }).field_scope || 'championship',
+        fieldScope:
+          (div as { field_scope?: string }).field_scope || 'championship',
       }
       if (
         !existing ||
-        (ROUND_DEPTH[candidate.roundType] ?? 0) > (ROUND_DEPTH[existing.roundType] ?? 0)
+        (ROUND_DEPTH[candidate.roundType] ?? 0) >
+          (ROUND_DEPTH[existing.roundType] ?? 0)
       ) {
         bestByKey.set(key, candidate)
       }
@@ -239,7 +260,7 @@ export async function finalizeEventPoints(
       season_id: event.season_id!,
       event_id: eventId,
       category_id: a.categoryId,
-      member_id: a.memberId,
+      competitor_id: a.competitorId,
       division_id: a.divisionId,
       round_type: a.roundType,
       placement: a.placement,
@@ -248,7 +269,7 @@ export async function finalizeEventPoints(
       bonus_points: 0,
       multiplier,
       points,
-      representing_geo_id: geoByMember.get(a.memberId) ?? null,
+      representing_geo_id: geoByCompetitor.get(a.competitorId) ?? null,
       event_date: event.event_date,
       eligibility: a.eligibility,
       field_scope: a.fieldScope,

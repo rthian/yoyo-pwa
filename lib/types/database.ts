@@ -357,7 +357,8 @@ export interface RegistrationAuditEvent {
 export interface DivisionMember {
   id: string
   division_id: string
-  member_id: string
+  /** Slice D2: sole competition identity (member_id dropped) */
+  competitor_id: string
   play_order: number | null
   status: DivisionMemberStatus
   created_at: string

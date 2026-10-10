@@ -77,56 +77,33 @@ export async function buildDivisionMusicPlaylist(
 
   const { data: participants } = await supabase
     .from('division_members')
-    .select('id, play_order, member_id, status')
+    .select('id, play_order, competitor_id, status')
     .eq('division_id', divisionId)
     .order('play_order', { ascending: true, nullsFirst: false })
 
-  const memberIds = (participants ?? []).map((p) => p.member_id)
+  const competitorIds = [
+    ...new Set(
+      (participants ?? [])
+        .map((p) => p.competitor_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ]
 
-  const { data: competitors } = memberIds.length
+  const { data: competitors } = competitorIds.length
     ? await supabase
         .from('competitors')
         .select('id, full_name, public_id, source_member_id')
-        .in('source_member_id', memberIds)
-    : { data: [] as Array<{
-        id: string
-        full_name: string
-        public_id: string | null
-        source_member_id: string | null
-      }> }
-
-  const competitorByMember = new Map(
-    (competitors ?? []).map((c) => [c.source_member_id as string, c])
-  )
-
-  // Also map self-links if source_member_id missing
-  if (memberIds.length) {
-    const { data: links } = await supabase
-      .from('account_competitor_links')
-      .select('account_id, competitor_id, relationship')
-      .in('account_id', memberIds)
-      .eq('relationship', 'self')
-    const missingMemberIds = memberIds.filter((id) => !competitorByMember.has(id))
-    if (links?.length && missingMemberIds.length) {
-      const cids = links.map((l) => l.competitor_id)
-      const { data: comps } = await supabase
-        .from('competitors')
-        .select('id, full_name, public_id')
-        .in('id', cids)
-      const byId = new Map((comps ?? []).map((c) => [c.id, c]))
-      for (const link of links) {
-        const c = byId.get(link.competitor_id)
-        if (c && !competitorByMember.has(link.account_id)) {
-          competitorByMember.set(link.account_id, {
-            ...c,
-            source_member_id: link.account_id,
-          })
-        }
+        .in('id', competitorIds)
+    : {
+        data: [] as Array<{
+          id: string
+          full_name: string
+          public_id: string | null
+          source_member_id: string | null
+        }>,
       }
-    }
-  }
 
-  const competitorIds = [...competitorByMember.values()].map((c) => c.id)
+  const competitorById = new Map((competitors ?? []).map((c) => [c.id, c]))
   const { data: submissions } = competitorIds.length
     ? await supabase
         .from('music_submissions')
@@ -149,7 +126,8 @@ export async function buildDivisionMusicPlaylist(
 
   const rows: MusicOpsRow[] = []
   for (const p of participants ?? []) {
-    const competitor = competitorByMember.get(p.member_id)
+    if (!p.competitor_id) continue
+    const competitor = competitorById.get(p.competitor_id)
     if (!competitor) continue
     const sub = subByCompetitor.get(competitor.id)
     const version = sub?.active_version as

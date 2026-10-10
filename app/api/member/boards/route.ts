@@ -5,6 +5,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
+import { getCompetitorIdsForAccount } from '@/lib/identity/competitors'
 
 export async function GET() {
   try {
@@ -17,12 +18,17 @@ export async function GET() {
       return NextResponse.json({ boards: [] })
     }
 
+    const competitorIds = await getCompetitorIdsForAccount(admin, user.id)
+    if (!competitorIds.length) {
+      return NextResponse.json({ boards: [] })
+    }
+
     const { data, error } = await admin
       .from('division_members')
       .select(
         'division:divisions(id, name, scoring_locked, event:events(id, name, event_date))'
       )
-      .eq('member_id', user.id)
+      .in('competitor_id', competitorIds)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })

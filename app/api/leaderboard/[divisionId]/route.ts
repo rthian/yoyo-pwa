@@ -98,7 +98,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       .select(`
         id,
         play_order,
-        member:members(id, full_name, nickname, country)
+        competitor:competitors(id, full_name, nickname, country, public_id, source_member_id)
       `)
       .eq('division_id', divisionId)
       .order('play_order', { ascending: true })
@@ -136,9 +136,19 @@ export async function GET(request: Request, { params }: RouteParams) {
       .eq('is_submitted', true)
 
     // Calculate averages using only counting judges
-    type ParticipantMember = { id: string; full_name: string; nickname: string | null; country: string | null } | null
+    type ParticipantCompetitor = {
+      id: string
+      full_name: string
+      nickname: string | null
+      country: string | null
+      public_id: string | null
+      source_member_id: string | null
+    } | null
     const leaderboard = participants.map(participant => {
-      const member = participant.member as unknown as ParticipantMember
+      const raw = participant.competitor as unknown as
+        | ParticipantCompetitor
+        | ParticipantCompetitor[]
+      const competitor = (Array.isArray(raw) ? raw[0] : raw) ?? null
       const participantScores = (scores?.filter(
         s => s.division_member_id === participant.id && countingJudgeIds.has(s.judge_id)
       ) || [])
@@ -147,10 +157,10 @@ export async function GET(request: Request, { params }: RouteParams) {
       
       if (scoreCount === 0) {
         return {
-          memberId: member?.id,
-          memberName: member?.full_name,
-          nickname: member?.nickname,
-          country: member?.country,
+          memberId: competitor?.id,
+          memberName: competitor?.full_name,
+          nickname: competitor?.nickname,
+          country: competitor?.country,
           playOrder: participant.play_order,
           avgTechnical: 0,
           avgPerformance: 0,
@@ -173,10 +183,10 @@ export async function GET(request: Request, { params }: RouteParams) {
       ) / scoreCount
 
       return {
-        memberId: member?.id,
-        memberName: member?.full_name,
-        nickname: member?.nickname,
-        country: member?.country,
+        memberId: competitor?.id,
+        memberName: competitor?.full_name,
+        nickname: competitor?.nickname,
+        country: competitor?.country,
         playOrder: participant.play_order,
         avgTechnical: Math.round(avgTechnical * 100) / 100,
         avgPerformance: Math.round(avgPerformance * 100) / 100,

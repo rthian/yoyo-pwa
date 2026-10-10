@@ -5,6 +5,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
+import { getCompetitorIdsForAccount } from '@/lib/identity/competitors'
 
 export async function GET() {
   try {
@@ -14,6 +15,11 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const competitorIds = await getCompetitorIdsForAccount(supabaseAdmin, user.id)
+    if (!competitorIds.length) {
+      return NextResponse.json({ history: [] })
     }
 
     // Fetch all division memberships with event info
@@ -37,7 +43,7 @@ export async function GET() {
           )
         )
       `)
-      .eq('member_id', user.id)
+      .in('competitor_id', competitorIds)
       .order('created_at', { ascending: false })
 
     if (memberError) {

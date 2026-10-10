@@ -1,8 +1,7 @@
 /**
- * Slice A identity helpers: accounts (members) manage competitors via links.
- * Callers: app/api/auth/register, app/api/auth/signup, future registration APIs.
- * No FK remaps yet — competition tables still reference members.
- * User: ADR Account vs Competitor Identity / Prompt 2 Slice A
+ * Identity helpers: accounts (members) manage competitors via links.
+ * Slice A: competitors + links. Slice B: dual-write competitor_id helpers.
+ * Callers: signup, participants API, rankings standings/finalize.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateLeagueId } from '@/lib/rankings/league-id'
@@ -183,6 +182,55 @@ export async function getCompetitorIdForMember(
     .maybeSingle()
 
   return link?.competitor_id ?? null
+}
+
+/** All competitor ids an account manages (any relationship). */
+export async function getCompetitorIdsForAccount(
+  supabase: SupabaseClient,
+  accountId: string
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('account_competitor_links')
+    .select('competitor_id')
+    .eq('account_id', accountId)
+
+  if (error) throw new Error(error.message)
+  return [...new Set((data ?? []).map((r) => r.competitor_id).filter(Boolean))]
+}
+
+/**
+ * Slice B: map member ids → competitor ids (missing links omitted).
+ */
+export async function mapCompetitorIdsForMembers(
+  supabase: SupabaseClient,
+  memberIds: string[]
+): Promise<Map<string, string>> {
+  const unique = [...new Set(memberIds.filter(Boolean))]
+  const out = new Map<string, string>()
+  if (!unique.length) return out
+
+  const { data: bySource } = await supabase
+    .from('competitors')
+    .select('id, source_member_id')
+    .in('source_member_id', unique)
+
+  for (const row of bySource ?? []) {
+    if (row.source_member_id) out.set(row.source_member_id, row.id)
+  }
+
+  const missing = unique.filter((id) => !out.has(id))
+  if (missing.length) {
+    const { data: links } = await supabase
+      .from('account_competitor_links')
+      .select('account_id, competitor_id')
+      .in('account_id', missing)
+      .eq('relationship', 'self')
+    for (const row of links ?? []) {
+      out.set(row.account_id, row.competitor_id)
+    }
+  }
+
+  return out
 }
 
 export async function assertManagesCompetitor(

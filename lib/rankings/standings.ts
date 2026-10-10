@@ -1,10 +1,6 @@
 /**
  * Shared standings computation (same rules as live division leaderboard).
- * Called by: app/api/divisions/[id]/lock/route.ts (snapshot on lock),
- *            lib/rankings/finalize.ts (indirect via division_results).
- * No prior lib/rankings/standings.ts (Glob empty).
- * Writes division_results: { division_id, member_id, placement, total_score, score_count, source: 'auto' }.
- * User: create a branch… plan & build a ranking with point system league leaderboards…
+ * Used by lock snapshot and rankings finalize via division_results.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { LeagueStandingsRow } from './types'
@@ -15,7 +11,7 @@ export async function computeDivisionStandings(
 ): Promise<LeagueStandingsRow[]> {
   const { data: participants } = await supabase
     .from('division_members')
-    .select('id, member_id, play_order')
+    .select('id, competitor_id, play_order')
     .eq('division_id', divisionId)
     .order('play_order', { ascending: true })
 
@@ -59,7 +55,8 @@ export async function computeDivisionStandings(
     const totalScore =
       scoreCount > 0 ? vals.reduce((a, b) => a + b, 0) / scoreCount : 0
     return {
-      memberId: p.member_id,
+      memberId: null,
+      competitorId: p.competitor_id ?? null,
       totalScore: Math.round(totalScore * 100) / 100,
       scoreCount,
       placement: null,
@@ -80,10 +77,14 @@ export async function computeDivisionStandings(
     r.placement = lastRank
   })
 
-  const placementByMember = new Map(ranked.map((r) => [r.memberId, r.placement]))
+  const placementKey = (r: LeagueStandingsRow) =>
+    r.competitorId || r.memberId || ''
+  const placementByKey = new Map(
+    ranked.map((r) => [placementKey(r), r.placement])
+  )
   return rows.map((r) => ({
     ...r,
-    placement: placementByMember.get(r.memberId) ?? null,
+    placement: placementByKey.get(placementKey(r)) ?? null,
   }))
 }
 
@@ -101,17 +102,26 @@ export async function snapshotDivisionResults(
 
   if (!standings.length) return 0
 
-  const rows = standings.map((s) => ({
-    division_id: divisionId,
-    member_id: s.memberId,
-    placement: s.placement,
-    total_score: s.scoreCount > 0 ? s.totalScore : null,
-    score_count: s.scoreCount,
-    source: 'auto' as const,
-  }))
+  // Slice D2: competitor_id only on division_results upsert
+  const rows = standings
+    .map((s) => {
+      const competitorId = s.competitorId
+      if (!competitorId) return null
+      return {
+        division_id: divisionId,
+        competitor_id: competitorId,
+        placement: s.placement,
+        total_score: s.scoreCount > 0 ? s.totalScore : null,
+        score_count: s.scoreCount,
+        source: 'auto' as const,
+      }
+    })
+    .filter((r): r is NonNullable<typeof r> => r != null)
+
+  if (!rows.length) return 0
 
   const { error } = await supabase.from('division_results').upsert(rows, {
-    onConflict: 'division_id,member_id',
+    onConflict: 'division_id,competitor_id',
   })
 
   if (error) throw new Error(error.message)
