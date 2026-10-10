@@ -8,6 +8,7 @@ import {
   requireEventCapabilityResponse,
 } from '@/lib/auth/request'
 import { cancelRegistration } from '@/lib/registration/service'
+import { reviewReceipt, listReceipts, RECEIPT_BUCKET } from '@/lib/payments/receipts'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -96,7 +97,28 @@ export async function GET(request: Request, { params }: RouteParams) {
       })
     }
 
-    return NextResponse.json({ registrations: registrations ?? [] })
+    const regs = registrations ?? []
+    const enriched = await Promise.all(
+      regs.map(async (reg) => {
+        const receipts = await listReceipts(auth.supabaseAdmin, reg.id)
+        const latest = receipts[0] ?? null
+        let latest_signed_url: string | null = null
+        if (latest) {
+          const { data } = await auth.supabaseAdmin.storage
+            .from(RECEIPT_BUCKET)
+            .createSignedUrl(latest.storage_path, 60 * 30)
+          latest_signed_url = data?.signedUrl ?? null
+        }
+        return {
+          ...reg,
+          latest_receipt: latest
+            ? { ...latest, signed_url: latest_signed_url }
+            : null,
+        }
+      })
+    )
+
+    return NextResponse.json({ registrations: enriched })
   } catch (error) {
     console.error('Event registrations list error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -154,6 +176,20 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       if (!entryId) {
         return NextResponse.json({ error: 'entry_id required' }, { status: 400 })
       }
+      const { data: eventPay } = await auth.supabaseAdmin
+        .from('events')
+        .select('require_paid_before_confirm')
+        .eq('id', eventId)
+        .maybeSingle()
+      if (
+        eventPay?.require_paid_before_confirm &&
+        !['paid', 'waived', 'not_required'].includes(reg.payment_status)
+      ) {
+        return NextResponse.json(
+          { error: 'Payment must be paid or waived before confirming entry' },
+          { status: 409 }
+        )
+      }
       const { data, error } = await auth.supabaseAdmin.rpc(
         'confirm_or_waitlist_registration_entry',
         { p_entry_id: entryId, p_actor_id: auth.user.id }
@@ -177,6 +213,49 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 400 })
       }
+      return NextResponse.json({ registration: data })
+    }
+
+    if (action === 'approve_payment' || action === 'reject_payment') {
+      const receiptId = body.receipt_id as string | undefined
+      if (!receiptId) {
+        return NextResponse.json({ error: 'receipt_id required' }, { status: 400 })
+      }
+      try {
+        const result = await reviewReceipt(auth.supabaseAdmin, {
+          eventId,
+          registrationId,
+          receiptId,
+          actorId: auth.user.id,
+          decision: action === 'approve_payment' ? 'approve' : 'reject',
+          reason: body.reason ?? null,
+        })
+        return NextResponse.json(result)
+      } catch (err) {
+        const status = (err as Error & { status?: number }).status ?? 500
+        return NextResponse.json(
+          { error: err instanceof Error ? err.message : 'Review failed' },
+          { status: status === 400 || status === 404 ? status : 500 }
+        )
+      }
+    }
+
+    if (action === 'waive_payment') {
+      const { data, error } = await auth.supabaseAdmin
+        .from('registrations')
+        .update({ payment_status: 'waived' })
+        .eq('id', registrationId)
+        .select('*')
+        .single()
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 400 })
+      }
+      await auth.supabaseAdmin.from('registration_audit_events').insert({
+        registration_id: registrationId,
+        actor_account_id: auth.user.id,
+        action: 'payment_waived',
+        detail: {},
+      })
       return NextResponse.json({ registration: data })
     }
 

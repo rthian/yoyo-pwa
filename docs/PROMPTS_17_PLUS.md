@@ -1,6 +1,6 @@
 # Prompts 17+ — Product playbook
 
-**Status:** Prompt **17** implemented on app (guardians); 18+ still planned. Identity through `025`.  
+**Status:** Prompts **17** (guardians) and **20** (QR receipts) on app; apply migration `026` after deploy. Identity through `025`.  
 **Payments:** Manual QR + receipt verification (**20**); Stripe deferred.
 
 ---
@@ -28,7 +28,7 @@
 - Member UI: manage `account_competitor_links` (`self`, `guardian`, `manager`, `coach`) and capability flags.
 - APIs: create competitor + link; revoke with audit (`granted_by`).
 - Registration & music: competitor selector; `assertManagesCompetitor` enforced in UI and API.
-- **Acceptance:** Parent registers child; guardian without `can_manage_music` cannot upload (API 403 + music UI filter). Payment (20) still pending.
+- **Acceptance:** Parent registers child; guardian without `can_manage_music` cannot upload (API 403 + music UI filter).
 
 ---
 
@@ -50,6 +50,8 @@
 ---
 
 ## Prompt 20 — QR payments & receipt upload
+
+**Shipped (app + `026`):** event payment fields, `registration_receipts`, member upload + staff approve/reject/waive, `require_paid_before_confirm` gate.
 
 **Not Stripe.** Regional QR (image or payload → rendered QR) + private receipt uploads + staff approval.
 

@@ -1,14 +1,21 @@
 /**
- * Competitor registration summary for the signed-in account.
+ * Competitor registration summary — Prompt 20 payment panel.
  */
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getManagedCompetitors } from '@/lib/identity/competitors'
+import PaymentReceiptPanel from '@/components/member/PaymentReceiptPanel'
 
 export default async function MemberRegistrationsPage() {
   const supabase = await createClient()
@@ -27,7 +34,11 @@ export default async function MemberRegistrationsPage() {
         .select(
           `
           id, status, eligibility_status, payment_status, waiver_status, created_at,
-          event:events(id, name, event_date, starts_at, status, timezone),
+          event:events(
+            id, name, event_date, starts_at, status, timezone,
+            payment_required, registration_fee_cents, registration_fee_currency,
+            payment_instructions, payment_qr_url, payment_qr_payload
+          ),
           competitor:competitors(id, full_name, public_id),
           entries:registration_entries(
             id, status, waitlist_position,
@@ -44,7 +55,8 @@ export default async function MemberRegistrationsPage() {
       <div>
         <h1 className="text-2xl font-bold">My registrations</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Event registrations for competitors you manage.
+          Event registrations for competitors you manage. Upload payment
+          receipts when an event requires fees.
         </p>
       </div>
 
@@ -52,7 +64,7 @@ export default async function MemberRegistrationsPage() {
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             No registrations yet.{' '}
-            <Link href="/events" className="text-primary underline">
+            <Link href="/member/events" className="text-primary underline">
               Browse events
             </Link>
           </CardContent>
@@ -65,6 +77,7 @@ export default async function MemberRegistrationsPage() {
               name: string
               status: string
               event_date: string | null
+              payment_required?: boolean
             } | null
             const competitor = reg.competitor as unknown as {
               full_name: string
@@ -83,10 +96,14 @@ export default async function MemberRegistrationsPage() {
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <CardTitle className="text-lg">{event?.name ?? 'Event'}</CardTitle>
+                      <CardTitle className="text-lg">
+                        {event?.name ?? 'Event'}
+                      </CardTitle>
                       <CardDescription>
                         {competitor?.full_name}
-                        {competitor?.public_id ? ` · ${competitor.public_id}` : ''}
+                        {competitor?.public_id
+                          ? ` · ${competitor.public_id}`
+                          : ''}
                       </CardDescription>
                     </div>
                     <Badge variant="secondary">{reg.status}</Badge>
@@ -107,9 +124,13 @@ export default async function MemberRegistrationsPage() {
                     ))}
                   </ul>
                   <div className="text-xs text-muted-foreground">
-                    Eligibility: {reg.eligibility_status} · Payment: {reg.payment_status} ·
-                    Waiver: {reg.waiver_status}
+                    Eligibility: {reg.eligibility_status} · Payment:{' '}
+                    {reg.payment_status} · Waiver: {reg.waiver_status}
                   </div>
+                  {(event?.payment_required ||
+                    reg.payment_status !== 'not_required') && (
+                    <PaymentReceiptPanel registrationId={reg.id} />
+                  )}
                   {event?.id && (
                     <Button asChild size="sm" variant="outline">
                       <Link href={`/events/${event.id}`}>Open event hub</Link>

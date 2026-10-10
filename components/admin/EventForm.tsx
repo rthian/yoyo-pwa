@@ -136,6 +136,13 @@ export default function EventForm({
       season_id: event?.season_id || null,
       tier_id: event?.tier_id || null,
       geo_id: event?.geo_id || null,
+      payment_required: event?.payment_required ?? false,
+      registration_fee_cents: event?.registration_fee_cents ?? null,
+      registration_fee_currency: event?.registration_fee_currency || 'SGD',
+      payment_instructions: event?.payment_instructions || '',
+      payment_qr_url: event?.payment_qr_url || '',
+      payment_qr_payload: event?.payment_qr_payload || '',
+      require_paid_before_confirm: event?.require_paid_before_confirm ?? false,
     },
   })
 
@@ -145,6 +152,8 @@ export default function EventForm({
   const tierId = watch('tier_id')
   const geoId = watch('geo_id')
   const contactPublic = watch('organizer_contact_public')
+  const paymentRequired = watch('payment_required')
+  const requirePaid = watch('require_paid_before_confirm')
 
   const onTimezoneChange = (tz: string) => {
     setTimezone(tz)
@@ -156,6 +165,7 @@ export default function EventForm({
     try {
       const payload: EventFormData = {
         ...data,
+        payment_qr_url: data.payment_qr_url || null,
         timezone,
         starts_at: fromDatetimeLocalValue(localTiming.starts_at, timezone),
         ends_at: fromDatetimeLocalValue(localTiming.ends_at, timezone),
@@ -502,6 +512,79 @@ export default function EventForm({
               </SelectContent>
             </Select>
           </div>
+        </div>
+      </div>
+
+
+      <div className="space-y-4 border rounded-lg p-4">
+        <h3 className="font-medium">Registration payment (QR)</h3>
+        <p className="text-sm text-muted-foreground">
+          Manual QR / bank transfer — registrants upload a receipt for staff to verify.
+        </p>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="payment_required">Require payment</Label>
+          <Switch
+            id="payment_required"
+            checked={!!paymentRequired}
+            onCheckedChange={(v) => setValue('payment_required', v)}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="require_paid">Require paid before confirm seat</Label>
+          <Switch
+            id="require_paid"
+            checked={!!requirePaid}
+            onCheckedChange={(v) => setValue('require_paid_before_confirm', v)}
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="fee_cents">Fee (cents)</Label>
+            <Input
+              id="fee_cents"
+              type="number"
+              min={0}
+              {...register('registration_fee_cents', {
+                setValueAs: (v) =>
+                  v === '' || v == null ? null : Number(v),
+              })}
+              placeholder="5000 = 50.00"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="fee_ccy">Currency</Label>
+            <Input
+              id="fee_ccy"
+              maxLength={3}
+              {...register('registration_fee_currency')}
+              placeholder="SGD"
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="pay_instr">Payment instructions</Label>
+          <Input
+            id="pay_instr"
+            {...register('payment_instructions')}
+            placeholder="Pay via PayNow / bank transfer…"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="qr_url">QR image URL</Label>
+          <Input
+            id="qr_url"
+            type="url"
+            {...register('payment_qr_url')}
+            placeholder="https://…"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="qr_payload">QR payload (optional text)</Label>
+          <Input
+            id="qr_payload"
+            {...register('payment_qr_payload')}
+            placeholder="PayNow UEN or payload string"
+          />
         </div>
       </div>
 

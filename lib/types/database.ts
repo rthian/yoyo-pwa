@@ -266,8 +266,32 @@ export interface Event {
   created_by: string | null
   results_published_at?: string | null
   results_published_by?: string | null
+  payment_required?: boolean
+  registration_fee_cents?: number | null
+  registration_fee_currency?: string | null
+  payment_instructions?: string | null
+  payment_qr_url?: string | null
+  payment_qr_payload?: string | null
+  require_paid_before_confirm?: boolean
   created_at: string
   updated_at: string
+}
+
+/** Prompt 20: uploaded payment proof for a registration */
+export interface RegistrationReceipt {
+  id: string
+  registration_id: string
+  version_number: number
+  storage_path: string
+  original_filename: string | null
+  mime_type: string | null
+  byte_size: number | null
+  status: 'pending' | 'approved' | 'rejected' | 'superseded'
+  uploaded_by_account_id: string | null
+  reviewed_by_account_id: string | null
+  reviewed_at: string | null
+  rejection_reason: string | null
+  created_at: string
 }
 
 export interface EventStaffRoleRow {

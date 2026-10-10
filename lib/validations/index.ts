@@ -64,6 +64,13 @@ export const eventSchema = z
     season_id: z.string().uuid().optional().nullable(),
     tier_id: z.string().uuid().optional().nullable(),
     geo_id: z.string().uuid().optional().nullable(),
+    payment_required: z.boolean().optional(),
+    registration_fee_cents: z.number().int().min(0).nullable().optional(),
+    registration_fee_currency: z.string().length(3).optional().nullable(),
+    payment_instructions: z.string().max(4000).optional().nullable(),
+    payment_qr_url: z.union([z.string().url(), z.literal(''), z.null()]).optional(),
+    payment_qr_payload: z.string().max(2000).optional().nullable(),
+    require_paid_before_confirm: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     const err = validateEventTimingOrder(data)
@@ -227,3 +234,19 @@ export const updateManagedLinkSchema = z.object({
 })
 
 export type UpdateManagedLinkData = z.infer<typeof updateManagedLinkSchema>
+
+
+// Prompt 20: payment receipts
+export const receiptUploadSchema = z.object({
+  action: z.literal('sign-upload'),
+  filename: z.string().min(1),
+  mime_type: z.string().min(3),
+  byte_size: z.number().int().positive(),
+})
+
+export const receiptReviewSchema = z.object({
+  registration_id: z.string().uuid(),
+  receipt_id: z.string().uuid(),
+  action: z.enum(['approve_payment', 'reject_payment']),
+  reason: z.string().max(1000).optional().nullable(),
+})

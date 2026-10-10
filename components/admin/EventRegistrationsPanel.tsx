@@ -1,5 +1,5 @@
 /**
- * Organizer registration list + CSV export for an event.
+ * Organizer registration list + payment receipt review (Prompt 20).
  */
 'use client'
 
@@ -23,6 +23,13 @@ interface EventRegistrationsPanelProps extends EventOpsPanelProps {
   eventId: string
 }
 
+type LatestReceipt = {
+  id: string
+  status: string
+  signed_url: string | null
+  rejection_reason: string | null
+} | null
+
 type RegRow = {
   id: string
   status: string
@@ -41,9 +48,13 @@ type RegRow = {
     waitlist_position: number | null
     division: { id: string; name: string } | null
   }>
+  latest_receipt?: LatestReceipt
 }
 
-export default function EventRegistrationsPanel({ eventId, readOnly = false }: EventRegistrationsPanelProps) {
+export default function EventRegistrationsPanel({
+  eventId,
+  readOnly = false,
+}: EventRegistrationsPanelProps) {
   const [rows, setRows] = useState<RegRow[]>([])
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState<string | null>(null)
@@ -68,13 +79,18 @@ export default function EventRegistrationsPanel({ eventId, readOnly = false }: E
   }, [eventId])
 
   const cancel = async (registrationId: string) => {
-    if (!confirm('Cancel this registration and remove synced division seats?')) return
+    if (!confirm('Cancel this registration and remove synced division seats?')) {
+      return
+    }
     setActing(registrationId)
     try {
       const res = await fetch(`/api/events/${eventId}/registrations`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registration_id: registrationId, action: 'cancel' }),
+        body: JSON.stringify({
+          registration_id: registrationId,
+          action: 'cancel',
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Cancel failed')
@@ -102,11 +118,69 @@ export default function EventRegistrationsPanel({ eventId, readOnly = false }: E
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Confirm failed')
       toast.success(
-        data.entry?.status === 'waitlisted' ? 'Still waitlisted (full)' : 'Confirmed'
+        data.entry?.status === 'waitlisted'
+          ? 'Still waitlisted (full)'
+          : 'Confirmed'
       )
       await load()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Confirm failed')
+    } finally {
+      setActing(null)
+    }
+  }
+
+  const reviewPayment = async (
+    registrationId: string,
+    receiptId: string,
+    action: 'approve_payment' | 'reject_payment'
+  ) => {
+    let reason: string | null = null
+    if (action === 'reject_payment') {
+      reason = prompt('Rejection reason (required)')
+      if (!reason?.trim()) return
+    }
+    setActing(receiptId)
+    try {
+      const res = await fetch(`/api/events/${eventId}/registrations`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          registration_id: registrationId,
+          receipt_id: receiptId,
+          action,
+          reason,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Review failed')
+      toast.success(action === 'approve_payment' ? 'Marked paid' : 'Receipt rejected')
+      await load()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Review failed')
+    } finally {
+      setActing(null)
+    }
+  }
+
+  const waive = async (registrationId: string) => {
+    if (!confirm('Waive payment for this registration?')) return
+    setActing(registrationId)
+    try {
+      const res = await fetch(`/api/events/${eventId}/registrations`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          registration_id: registrationId,
+          action: 'waive_payment',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Waive failed')
+      toast.success('Payment waived')
+      await load()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Waive failed')
     } finally {
       setActing(null)
     }
@@ -129,12 +203,12 @@ export default function EventRegistrationsPanel({ eventId, readOnly = false }: E
           Refresh
         </Button>
         {!readOnly && (
-        <Button variant="outline" size="sm" asChild>
-          <a href={`/api/events/${eventId}/registrations?format=csv`}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </a>
-        </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href={`/api/events/${eventId}/registrations?format=csv`}>
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </a>
+          </Button>
         )}
       </div>
 
@@ -148,8 +222,9 @@ export default function EventRegistrationsPanel({ eventId, readOnly = false }: E
             <TableRow>
               <TableHead>Competitor</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Payment</TableHead>
               <TableHead>Divisions</TableHead>
-              {!readOnly && <TableHead className="w-[160px]" />}
+              {!readOnly && <TableHead className="w-[200px]" />}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -170,9 +245,75 @@ export default function EventRegistrationsPanel({ eventId, readOnly = false }: E
                   </div>
                 </TableCell>
                 <TableCell>
+                  <Badge variant="outline">{row.payment_status}</Badge>
+                  {row.latest_receipt?.signed_url && (
+                    <div className="mt-1">
+                      <a
+                        href={row.latest_receipt.signed_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-primary underline"
+                      >
+                        View receipt
+                      </a>
+                    </div>
+                  )}
+                  {!readOnly &&
+                    row.latest_receipt?.status === 'pending' &&
+                    row.latest_receipt.id && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        <Button
+                          size="sm"
+                          variant="default"
+                          disabled={acting === row.latest_receipt.id}
+                          onClick={() =>
+                            reviewPayment(
+                              row.id,
+                              row.latest_receipt!.id,
+                              'approve_payment'
+                            )
+                          }
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={acting === row.latest_receipt.id}
+                          onClick={() =>
+                            reviewPayment(
+                              row.id,
+                              row.latest_receipt!.id,
+                              'reject_payment'
+                            )
+                          }
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    )}
+                  {!readOnly &&
+                    !['paid', 'waived', 'not_required'].includes(
+                      row.payment_status
+                    ) && (
+                      <Button
+                        size="sm"
+                        variant="link"
+                        className="h-auto p-0 mt-1 text-xs"
+                        disabled={acting === row.id}
+                        onClick={() => waive(row.id)}
+                      >
+                        Waive
+                      </Button>
+                    )}
+                </TableCell>
+                <TableCell>
                   <ul className="text-sm space-y-1">
                     {(row.entries ?? []).map((e) => (
-                      <li key={e.id} className="flex items-center gap-2 flex-wrap">
+                      <li
+                        key={e.id}
+                        className="flex items-center gap-2 flex-wrap"
+                      >
                         <span>{e.division?.name ?? 'Division'}</span>
                         <Badge variant="outline">{e.status}</Badge>
                         {e.waitlist_position != null && (
@@ -195,18 +336,18 @@ export default function EventRegistrationsPanel({ eventId, readOnly = false }: E
                   </ul>
                 </TableCell>
                 {!readOnly && (
-                <TableCell>
-                  {row.status !== 'cancelled' && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={acting === row.id}
-                      onClick={() => cancel(row.id)}
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                </TableCell>
+                  <TableCell>
+                    {row.status !== 'cancelled' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={acting === row.id}
+                        onClick={() => cancel(row.id)}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </TableCell>
                 )}
               </TableRow>
             ))}
