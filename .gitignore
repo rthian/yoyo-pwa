@@ -42,3 +42,4 @@ next-env.d.ts
 
 # Superdesign temp
 .superdesign/tmp/
+.gstack/

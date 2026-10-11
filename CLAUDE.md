@@ -42,16 +42,20 @@ app/                    # Next.js App Router
   (admin)/admin/        # Admin pages (event/division/member management)
   (judge)/judge/        # Judge pages (mobile-optimized scoring)
   (member)/member/      # Member pages
+  (marketing)/welcome/  # /welcome redirects to /; /welcome/product = public product summary
+  (organizer)/organize/ # Capability-gated event staff hub
   api/                  # API route handlers
   leaderboard/[id]/     # Public shareable leaderboard
   leaderboards/         # Public leaderboard hub
   login/                # Auth page
-  page.tsx              # Root: role-based redirect
+  page.tsx              # Root: marketing home (logged out) or role dashboard (signed in)
 components/
   admin/                # Admin-specific UI (DivisionForm, DivisionJudges, etc.)
   judge/                # Judge-specific UI (ScoringForm, NumberStepper, ClickerInput,
                         #   LockDivisionButton, JudgeVisualiser, DivisionPageTabs)
+  landing/              # Legacy compact entry (unused; marketing is at /)
   leaderboard/          # Leaderboard display components
+  marketing/            # Promo site sections (hero, audiences, features, product summary)
   ui/                   # shadcn/ui base components
 lib/
   auth/                 # Auth context (client) and server actions
@@ -70,9 +74,11 @@ lib/
 supabase/
   schema.sql            # Full DB schema
   migrations/           # Schema migrations
-docs/                   # Deployment guide, RLS workaround, scoring rules
-middleware.ts           # Route protection: /admin, /judge, /member require auth
+docs/                   # PRD, deployment guide, RLS workaround, scoring rules
+middleware.ts           # Route protection: /admin, /judge, /member, /organize require auth
 ```
+
+Product requirements (as-built + roadmap): [`docs/PRD.md`](docs/PRD.md). Public summary: `/welcome/product`.
 
 ---
 
@@ -86,7 +92,7 @@ Routes are organized in Next.js [route groups](https://nextjs.org/docs/app/build
 - `(judge)` — judge layout (mobile-first, bottom nav)
 - `(member)` — member layout
 
-The root `app/page.tsx` checks the user's role and redirects to the appropriate dashboard using the `RoleDashboard` component with `dynamic = 'force-dynamic'`.
+The root `app/page.tsx` serves the marketing home when logged out, or `RoleDashboard` (role-specific dashboards) when signed in (`dynamic = 'force-dynamic'`). `/welcome` redirects to `/`; product summary stays at `/welcome/product`.
 
 ### Authentication & Authorization
 
