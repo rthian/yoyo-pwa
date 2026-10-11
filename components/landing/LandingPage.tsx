@@ -8,6 +8,11 @@ import { ChevronRight } from 'lucide-react'
 
 const capabilities = [
   {
+    href: '/welcome',
+    title: 'Why YoYo League',
+    description: 'Product tour for organizers, judges, and fans',
+  },
+  {
     href: '/rankings',
     title: 'League Rankings',
     description: 'Season points by 1A–5A and world → state',
@@ -51,9 +56,19 @@ export default function LandingPage() {
           <p className="mt-2 max-w-sm text-pretty text-base text-muted-foreground leading-relaxed">
             Event management, judging, and live rankings for competitive yo-yo.
           </p>
-          <Button asChild size="lg" className="mt-8 min-w-[200px] rounded-full px-8 text-base">
-            <Link href="/login">Sign In</Link>
-          </Button>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Button asChild size="lg" className="min-w-[160px] rounded-full px-8 text-base">
+              <Link href="/login">Sign In</Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="min-w-[160px] rounded-full px-8 text-base"
+            >
+              <Link href="/welcome">Why YoYo League</Link>
+            </Button>
+          </div>
         </section>
 
         <section className="space-y-2 pb-6" aria-label="What you can do">
