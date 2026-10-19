@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
+import HeroAppShowcase from '@/components/marketing/HeroAppShowcase'
 
 export default function WelcomeHero() {
   const reduce = useReducedMotion()
@@ -15,30 +16,35 @@ export default function WelcomeHero() {
         className="pointer-events-none absolute inset-0 opacity-90"
         style={{
           background:
-            'radial-gradient(120% 80% at 72% 18%, color-mix(in oklab, var(--primary) 24%, transparent), transparent 58%)',
+            'radial-gradient(90% 70% at 78% 42%, color-mix(in oklab, var(--primary) 22%, transparent), transparent 62%)',
         }}
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-24 top-20 size-[min(70vw,520px)] rounded-full blur-3xl"
+        className="pointer-events-none absolute -right-16 top-10 size-[min(65vw,480px)] rounded-full blur-3xl"
         style={{
-          backgroundColor: 'color-mix(in oklab, var(--accent) 60%, transparent)',
-        }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-16 bottom-0 size-[min(50vw,360px)] rounded-full blur-3xl"
-        style={{
-          backgroundColor: 'color-mix(in oklab, var(--secondary) 70%, transparent)',
+          backgroundColor: 'color-mix(in oklab, var(--accent) 55%, transparent)',
         }}
       />
 
-      <div className="relative mx-auto flex min-h-[calc(100svh-4rem)] max-w-5xl flex-col justify-end px-4 pb-16 pt-24 sm:px-6 sm:pb-24">
+      {/* Single showcase: stacked on mobile, right plane on md+ (names stay clear of copy fade) */}
+      <div className="pointer-events-none relative mx-auto w-full max-w-5xl px-4 pt-8 sm:px-6 md:absolute md:inset-y-0 md:right-0 md:mx-0 md:h-full md:max-w-none md:w-[58%] md:px-0 md:pr-0 md:pt-0 lg:w-[60%]">
+        <div className="relative h-[min(48svh,400px)] w-full md:absolute md:inset-y-6 md:right-0 md:left-2 md:h-auto lg:left-4">
+          <HeroAppShowcase className="absolute inset-0" />
+        </div>
+      </div>
+
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 hidden bg-gradient-to-r from-background from-30% via-background/90 via-42% to-transparent to-55% md:block"
+      />
+
+      <div className="relative mx-auto flex min-h-0 max-w-5xl flex-col px-4 pb-16 pt-2 sm:px-6 sm:pb-24 md:min-h-[calc(100svh-4rem)] md:justify-center md:pb-20 md:pt-24">
         <motion.div
           initial={reduce ? false : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="max-w-2xl"
+          className="max-w-md lg:max-w-xl"
         >
           <h1 className="text-balance text-5xl font-bold tracking-tight text-foreground sm:text-6xl md:text-7xl">
             YoYo League
@@ -47,8 +53,8 @@ export default function WelcomeHero() {
             Compete. Score. Rank.
           </p>
           <p className="mt-4 max-w-md text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
-            One PWA for event ops, floor judging that works offline, live boards, and season
-            rankings.
+            Score on the floor — the live board updates as clicks land. Offline-ready judging, then
+            season rankings, in one PWA.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Button asChild size="lg" className="min-h-12 rounded-full px-8 text-base">
