@@ -48,6 +48,10 @@ export default async function JudgeHomePage() {
     .eq('judge_id', user.id)
     .eq('is_submitted', true)
 
+  const totalAssigned = pendingCount + (completedCount || 0)
+  const progressPct =
+    totalAssigned > 0 ? Math.round(((completedCount || 0) / totalAssigned) * 100) : 0
+
   return (
     <div className="space-y-4 pb-4">
       {/* Pending hero */}
@@ -65,6 +69,16 @@ export default async function JudgeHomePage() {
               <p className="text-2xl font-semibold tabular-nums">{completedCount || 0}</p>
             </div>
           </div>
+          {totalAssigned > 0 && (
+            <div>
+              <div className="progress-track h-2">
+                <div className="progress-fill" style={{ width: `${progressPct}%` }} />
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">
+                {completedCount || 0} of {totalAssigned} scored · {progressPct}%
+              </p>
+            </div>
+          )}
           <div className="flex gap-2">
             <Button asChild className="flex-1 h-12 rounded-full">
               <Link href="/judge/queue">
@@ -126,7 +140,7 @@ export default async function JudgeHomePage() {
                 <Link
                   key={assignment.id}
                   href={`/judge/divisions/${division?.id}`}
-                  className="flex min-h-16 items-center gap-3 rounded-xl px-3 py-3 active:bg-accent transition-colors tap-highlight-none"
+                  className="pressable pressable-tonal flex min-h-16 items-center gap-3 rounded-xl px-3 py-3 active:bg-accent transition-colors tap-highlight-none"
                 >
                   <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted">
                     <Users className="h-5 w-5 text-muted-foreground" />

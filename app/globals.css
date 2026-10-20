@@ -198,3 +198,42 @@
     display: none;
   }
 }
+
+/* M3 Expressive press feedback — brief scale + tonal state layer (docs/UX_REVIEW F3) */
+@layer utilities {
+  .pressable {
+    transition:
+      transform 120ms cubic-bezier(0.2, 0, 0, 1),
+      background-color 120ms ease;
+  }
+  .pressable:active {
+    transform: scale(0.97);
+  }
+  .pressable-tonal:active {
+    background-color: color-mix(in srgb, var(--primary) 10%, transparent);
+  }
+}
+
+/* Uniform visible focus ring for keyboard users (M3) */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: inherit;
+  }
+}
+
+/* Smooth progress bars (judge home / queue) */
+@layer utilities {
+  .progress-track {
+    overflow: hidden;
+    border-radius: 9999px;
+    background-color: color-mix(in srgb, var(--primary) 14%, transparent);
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 9999px;
+    background-color: var(--primary);
+    transition: width 300ms cubic-bezier(0.2, 0, 0, 1);
+  }
+}

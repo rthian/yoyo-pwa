@@ -150,6 +150,16 @@ export default async function JudgeQueuePage() {
         <p className="text-muted-foreground">
           Next up by play order · {unfinished.length} left · {doneCount} done
         </p>
+        {items.length > 0 && (
+          <div className="mt-3">
+            <div className="progress-track h-2">
+              <div
+                className="progress-fill"
+                style={{ width: `${Math.round((doneCount / items.length) * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {upNext ? (
@@ -203,7 +213,7 @@ export default async function JudgeQueuePage() {
             const isUpNext = upNext?.divisionMemberId === item.divisionMemberId
             const card = (
               <Card
-                className={`transition-colors ${
+                className={`pressable transition-colors ${
                   isUpNext ? 'border-primary ring-1 ring-primary/40' : ''
                 } ${!locked ? 'hover:bg-accent active:scale-[0.98]' : 'opacity-70'}`}
               >
