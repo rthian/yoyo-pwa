@@ -237,3 +237,13 @@
     transition: width 300ms cubic-bezier(0.2, 0, 0, 1);
   }
 }
+
+/* Seamless marquee for the marketing ticker (content duplicated once) */
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
