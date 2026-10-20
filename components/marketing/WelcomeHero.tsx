@@ -1,9 +1,26 @@
 'use client'
 
 import Link from 'next/link'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion, useReducedMotion, type Variants } from 'framer-motion'
 import { Button } from '@/components/ui/button'
+import { Smartphone, WifiOff, Eye } from 'lucide-react'
 import HeroAppShowcase from '@/components/marketing/HeroAppShowcase'
+
+const container: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.09, delayChildren: 0.05 } },
+}
+
+const item: Variants = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
+}
+
+const trustPoints = [
+  { icon: Smartphone, label: 'No install required' },
+  { icon: WifiOff, label: 'Judging works offline' },
+  { icon: Eye, label: 'Fans never need an account' },
+] as const
 
 export default function WelcomeHero() {
   const reduce = useReducedMotion()
@@ -41,22 +58,38 @@ export default function WelcomeHero() {
 
       <div className="relative mx-auto flex min-h-0 max-w-5xl flex-col px-4 pb-16 pt-2 sm:px-6 sm:pb-24 md:min-h-[calc(100svh-4rem)] md:justify-center md:pb-20 md:pt-24">
         <motion.div
-          initial={reduce ? false : { opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          variants={reduce ? undefined : container}
+          initial={reduce ? false : 'hidden'}
+          animate="show"
           className="max-w-md lg:max-w-xl"
         >
-          <h1 className="text-balance text-5xl font-bold tracking-tight text-foreground sm:text-6xl md:text-7xl">
-            YoYo League
-          </h1>
-          <p className="mt-4 text-pretty text-xl font-medium tracking-tight text-primary sm:text-2xl">
+          <motion.div variants={reduce ? undefined : item}>
+            <p className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold tracking-wide text-primary">
+              <span className="size-1.5 rounded-full bg-primary" />
+              Event ops · Floor judging · Live boards
+            </p>
+          </motion.div>
+
+          <motion.h1
+            variants={reduce ? undefined : item}
+            className="mt-5 text-balance text-5xl font-bold tracking-tight text-foreground sm:text-6xl md:text-7xl"
+          >
+            YoYo <span className="text-primary">League</span>
+          </motion.h1>
+          <motion.p
+            variants={reduce ? undefined : item}
+            className="mt-4 text-pretty text-xl font-medium tracking-tight text-primary sm:text-2xl"
+          >
             Compete. Score. Rank.
-          </p>
-          <p className="mt-4 max-w-md text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
+          </motion.p>
+          <motion.p
+            variants={reduce ? undefined : item}
+            className="mt-4 max-w-md text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg"
+          >
             Score on the floor — the live board updates as clicks land. Offline-ready judging, then
             season rankings, in one PWA.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          </motion.p>
+          <motion.div variants={reduce ? undefined : item} className="mt-8 flex flex-wrap items-center gap-3">
             <Button asChild size="lg" className="min-h-12 rounded-full px-8 text-base">
               <Link href="/signup">Create account</Link>
             </Button>
@@ -68,7 +101,21 @@ export default function WelcomeHero() {
             >
               <Link href="/leaderboards">Live boards</Link>
             </Button>
-          </div>
+          </motion.div>
+          <motion.ul
+            variants={reduce ? undefined : item}
+            className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2"
+          >
+            {trustPoints.map(({ icon: Icon, label }) => (
+              <li
+                key={label}
+                className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
+              >
+                <Icon className="h-3.5 w-3.5 text-primary/70" />
+                {label}
+              </li>
+            ))}
+          </motion.ul>
         </motion.div>
       </div>
     </section>

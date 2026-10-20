@@ -93,6 +93,18 @@ export default function MemberDashboardView({ member }: MemberDashboardViewProps
     })
   }
 
+  const relativeDay = (dateStr: string | null) => {
+    if (!dateStr) return null
+    const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+    const then = startOf(new Date(dateStr))
+    const now = startOf(new Date())
+    const diffDays = Math.round((then - now) / 86_400_000)
+    if (diffDays === 0) return 'Today'
+    if (diffDays === 1) return 'Tomorrow'
+    if (diffDays > 1 && diffDays < 7) return formatDate(dateStr)
+    return formatDate(dateStr)
+  }
+
   const roundTypeLabels: Record<string, string> = {
     wildcard: 'WildCard',
     qualifier: 'Qualifier',
@@ -124,15 +136,77 @@ export default function MemberDashboardView({ member }: MemberDashboardViewProps
       <main className="min-h-screen bg-gradient-to-b from-background to-muted">
         <div className="container mx-auto px-4 py-8">
           {/* Welcome Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold">
-              Welcome, {member.nickname || member.full_name}
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold tracking-tight">
+              {new Date().getHours() < 12
+                ? 'Good morning'
+                : new Date().getHours() < 18
+                  ? 'Good afternoon'
+                  : 'Good evening'}
+              , {member.nickname || member.full_name}
             </h1>
             <p className="text-muted-foreground mt-1">
-              {countryDisplay && <span className="mr-2">{countryDisplay}</span>}
-              {countryDisplay ? '· ' : ''}Here&apos;s your competition overview
+              <span>
+                {new Date().toLocaleDateString(undefined, {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </span>
+              {countryDisplay && <span className="ml-2">· {countryDisplay}</span>}
             </p>
           </div>
+
+          {/* Next Up Hero — the one thing a competitor cares about on event day (F1) */}
+          {!loading && upcomingSessions.length > 0 && (
+            (() => {
+              const next = upcomingSessions[0]
+              return (
+                <Card className="mb-6 border-primary/30 bg-primary/5 overflow-hidden">
+                  <CardContent className="p-4 space-y-3">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Next up{upcomingSessions.length > 1 ? ` · ${upcomingSessions.length} sessions scheduled` : ''}
+                    </p>
+                    <div className="flex items-center gap-4">
+                      <div className="text-center min-w-[72px] rounded-2xl bg-background/80 border border-primary/15 px-3 py-2">
+                        <p className="text-xl font-bold tabular-nums tracking-tight">
+                          {formatTime(next.scheduled_start)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {relativeDay(next.scheduled_start)}
+                        </p>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold truncate">{next.name}</p>
+                          {next.round_type && (
+                            <Badge variant="outline" className="text-xs capitalize rounded-full">
+                              {roundTypeLabels[next.round_type] || next.round_type}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {next.eventName}
+                        </p>
+                        {next.venue && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <MapPin className="h-3 w-3" />
+                            {next.venue}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Button asChild className="w-full rounded-full">
+                      <Link href={`/events/${next.eventId}`}>
+                        View event schedule
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              )
+            })()
+          )}
 
           {staffEventCount > 0 && (
             <Card className="mb-6 border-primary/30">
@@ -165,9 +239,9 @@ export default function MemberDashboardView({ member }: MemberDashboardViewProps
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              ) : upcomingSessions.length > 0 ? (
+              ) : upcomingSessions.length > 1 ? (
                 <div className="space-y-3">
-                  {upcomingSessions.map((session) => (
+                  {upcomingSessions.slice(1).map((session) => (
                     <div
                       key={session.id}
                       className="flex items-center gap-4 p-3 rounded-lg border"
@@ -202,10 +276,16 @@ export default function MemberDashboardView({ member }: MemberDashboardViewProps
               ) : (
                 <div className="text-center py-6 text-muted-foreground">
                   <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No upcoming sessions scheduled</p>
-                  <Link href="/member/events" className="text-sm text-primary hover:underline mt-1 inline-block">
-                    Browse events to register
-                  </Link>
+                  <p>
+                    {upcomingSessions.length === 1
+                      ? 'No further sessions scheduled'
+                      : 'No upcoming sessions scheduled'}
+                  </p>
+                  {upcomingSessions.length !== 1 && (
+                    <Link href="/member/events" className="text-sm text-primary hover:underline mt-1 inline-block">
+                      Browse events to register
+                    </Link>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -242,7 +322,7 @@ export default function MemberDashboardView({ member }: MemberDashboardViewProps
                       <Link
                         key={event.id}
                         href={`/events/${event.id}`}
-                        className="flex items-center justify-between p-3 rounded-lg hover:bg-accent transition-colors"
+                        className="pressable pressable-tonal flex items-center justify-between p-3 rounded-lg hover:bg-accent transition-colors"
                       >
                         <div>
                           <p className="font-medium">{event.name}</p>

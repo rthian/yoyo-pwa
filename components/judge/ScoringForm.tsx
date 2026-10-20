@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { ArrowLeft, Save, Send, Loader2, User, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import ClickerInput from './ClickerInput'
 import ScoreSlider from './ScoreSlider'
 import JudgeRulesSheet from './JudgeRulesSheet'
@@ -289,7 +290,6 @@ export default function ScoringForm({
             <p className="text-xs text-muted-foreground truncate">
               {division.name}
               {participant.play_order != null ? ` · #${participant.play_order}` : ''}
-              {step === 'te' ? ' · Live TE' : ' · FE Evaluation'}
             </p>
           </div>
           <Badge variant="outline" className="rounded-full shrink-0">
@@ -312,6 +312,33 @@ export default function ScoringForm({
             {ruleset.version ? ` v${ruleset.version}` : ''}
           </p>
         )}
+        {/* Explicit step indicator — judges must never wonder which stage they are in (F4) */}
+        <div className="mt-2 flex items-center gap-2">
+          {(
+            [
+              { id: 'te', n: 1, label: 'Live TE' },
+              { id: 'evaluation', n: 2, label: 'Evaluate' },
+            ] as const
+          ).map((s, i) => (
+            <div key={s.id} className="flex items-center gap-2">
+              {i > 0 && <div className="h-px w-4 bg-border" />}
+              <button
+                type="button"
+                onClick={() => setStep(s.id)}
+                aria-current={step === s.id ? 'step' : undefined}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors tap-highlight-none',
+                  step === s.id
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground'
+                )}
+              >
+                <span className="tabular-nums">{s.n}</span>
+                {s.label}
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
 
       {step === 'te' ? (

@@ -1,21 +1,26 @@
 'use client'
 
 import { motion, useReducedMotion } from 'framer-motion'
+import { CalendarCog, Gavel, UserRound, Eye } from 'lucide-react'
 
 const audiences = [
   {
+    icon: CalendarCog,
     title: 'Organizers & staff',
-    body: 'Publish events, run registration and music, lock scores, publish official results, and finalize season points — with capability-scoped /organize panels.',
+    body: 'Publish events, run registration and music, lock scores, publish official results, and finalize season points.',
   },
   {
+    icon: Gavel,
     title: 'Judges',
     body: 'Phone-first TE/FE scoring with drafts, overwrite confirm, offline queue, and head-judge lock plus panel visualiser.',
   },
   {
+    icon: UserRound,
     title: 'Competitors & guardians',
     body: 'Register, submit music, manage linked competitors, and follow boards and season standing from one account.',
   },
   {
+    icon: Eye,
     title: 'Fans',
     body: 'Open shareable live leaderboards and season rankings with no login required.',
   },
@@ -26,7 +31,7 @@ export default function AudienceSection() {
 
   return (
     <section id="audiences" className="border-t border-border/60 bg-muted/30">
-      <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6">
+      <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 sm:py-24">
         <motion.div
           initial={reduce ? false : { opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -41,25 +46,30 @@ export default function AudienceSection() {
           </p>
         </motion.div>
 
-        <ul className="mt-12 divide-y divide-border/70 border-y border-border/70">
-          {audiences.map(({ title, body }, i) => (
-            <motion.li
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {audiences.map(({ icon: Icon, title, body }, i) => (
+            <motion.div
               key={title}
-              initial={reduce ? false : { opacity: 0, y: 10 }}
+              initial={reduce ? false : { opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-40px' }}
               transition={{
                 duration: 0.35,
-                delay: reduce ? 0 : i * 0.05,
+                delay: reduce ? 0 : i * 0.06,
                 ease: [0.22, 1, 0.36, 1],
               }}
-              className="grid gap-2 py-8 sm:grid-cols-[minmax(0,14rem)_1fr] sm:gap-10"
+              className="pressable rounded-3xl border border-border/60 bg-background p-5 transition-colors hover:border-primary/30"
             >
-              <h3 className="text-lg font-semibold tracking-tight text-foreground">{title}</h3>
-              <p className="text-base leading-relaxed text-muted-foreground">{body}</p>
-            </motion.li>
+              <span className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Icon className="h-5 w-5" />
+              </span>
+              <h3 className="mt-4 text-base font-semibold tracking-tight text-foreground">
+                {title}
+              </h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p>
+            </motion.div>
           ))}
-        </ul>
+        </div>
       </div>
     </section>
   )
